@@ -1,4 +1,5 @@
 'use client';
+
 import SecurityForm from '@/components/SecurityForm';
 import { useState, useEffect } from 'react';
 import { supabase } from './supabase'; 
@@ -8,9 +9,20 @@ import {
 } from 'lucide-react';
 
 export default function Home() {
+  // =========================================================================
+  // CORE ENVIRONMENT SYSTEM CONFIGURATIONS
+  // =========================================================================
   const uiColorMode = '#f59e0b'; 
   const coachWhatsAppNumber = '919177385668'; 
   const masterBackupKey = 'TEAM-DINESH-2026-RECOVERY';
+
+  // =========================================================================
+  // STATE MANAGEMENT SYSTEM
+  // =========================================================================
+  
+  // Multi-Step Wizard Engine States
+  const [formStep, setFormStep] = useState(1);
+  const totalSteps = 4;
 
   // Panel Control Management States
   const [isAdminOpen, setIsAdminOpen] = useState(false);
@@ -19,12 +31,12 @@ export default function Home() {
   const [authError, setAuthError] = useState('');
   const [isUploading, setIsUploading] = useState(false);
 
- // Dynamic Security States
- const [currentStoredPassword, setCurrentStoredPassword] = useState('dinesh123'); 
- const [pwdCurrentInput, setPwdCurrentInput] = useState('');
- const [pwdNewInput, setPwdNewInput] = useState('');
- const [pwdStatusMessage, setPwdStatusMessage] = useState({ text: '', isError: false });
- const [generatedKey, setGeneratedKey] = useState(''); // 👈 ADD THIS LINE HERE
+  // Dynamic Security States
+  const [currentStoredPassword, setCurrentStoredPassword] = useState('dinesh123'); 
+  const [pwdCurrentInput, setPwdCurrentInput] = useState('');
+  const [pwdNewInput, setPwdNewInput] = useState('');
+  const [pwdStatusMessage, setPwdStatusMessage] = useState({ text: '', isError: false });
+  const [generatedKey, setGeneratedKey] = useState('');
 
   // Core Dynamic Application State Framework
   const [heroImage, setHeroImage] = useState('');
@@ -47,23 +59,23 @@ export default function Home() {
   const [newTransMeta, setNewTransMeta] = useState({
     name: '', age: '', rating: 5, beforeWeight: '', afterWeight: '', days: '', date: '', lossGainText: '', journeyText: ''
   });
-  
   const [tempMediaArray, setTempMediaArray] = useState([]); 
 
   // Carousel Layout Pointers
   const [activeGalleryIdx, setActiveGalleryIdx] = useState(0);
   const [activeTransIdx, setActiveTransIdx] = useState(0);
 
-  // Schema Editor Staging Structs
+  // Schema Editor Staging Structs (UPDATED WITH TARGET STEP SELECTOR)
   const [newFieldLabel, setNewFieldLabel] = useState('');
   const [newFieldRequired, setNewFieldRequired] = useState(false);
   const [newFieldType, setNewFieldType] = useState('text');
+  const [newFieldStep, setNewFieldStep] = useState(3); // Default destination step is 3
   const [rawOptions, setRawOptions] = useState('');
+
   // =========================================================================
   // CLOUD DATA HYDRATION ENGINE (SUPABASE DATA FETCHES)
   // =========================================================================
   async function loadStoredData() {
-    // Fetch Dynamic Security Pin
     const { data: pwdData } = await supabase.from('settings').select('value').eq('key', 'system_pin').single();
     if (pwdData && pwdData.value) setCurrentStoredPassword(pwdData.value);
 
@@ -99,25 +111,18 @@ export default function Home() {
   useEffect(() => {
     loadStoredData();
   }, []);
-  
+
+  // =========================================================================
+  // TERMINAL SECURITY METRICS OPERATIONS
+  // =========================================================================
   const handleAdminLogin = async (e) => {
     e.preventDefault();
-    
     try {
-      // Fetch the live default status flag directly from your settings table
-      const { data, error } = await supabase
-        .from('settings')
-        .select('is_default')
-        .limit(1)
-        .single();
-  
-      // If he changed the password already, block "dinesh123" at the login gate
+      const { data, error } = await supabase.from('settings').select('is_default').limit(1).single();
       if (data && data.is_default === false && adminPassword === 'dinesh123') {
         setAuthError('INVALID ACCESS: THIS DEFAULT PASSWORD HAS BEEN DEACTIVATED.');
         return;
       }
-  
-      // Standard authentication check (matches live password or master key)
       if (adminPassword === currentStoredPassword || adminPassword === masterBackupKey) {
         setIsAuthenticated(true);
         setAuthError('');
@@ -132,113 +137,65 @@ export default function Home() {
   const handlePasswordUpdate = async (e) => {
     e.preventDefault();
     setPwdStatusMessage({ text: '', isError: false });
-    setGeneratedKey(''); // Clears any previous key on screen
-  
+    setGeneratedKey('');
     if (!pwdCurrentInput || !pwdNewInput) {
       setPwdStatusMessage({ text: 'Fill out all security fields.', isError: true });
       return;
     }
-  
     try {
-      // 1. Fetch current live security status directly from the Supabase row
-      const { data: adminData, error: fetchError } = await supabase
-        .from('settings')
-        .select('is_default, password')
-        .limit(1)
-        .single();
-  
+      const { data: adminData, error: fetchError } = await supabase.from('settings').select('is_default, password').limit(1).single();
       if (fetchError || !adminData) {
         setPwdStatusMessage({ text: 'Security Matrix Check Failed: Could not fetch validation metrics.', isError: true });
         return;
       }
-  
-      // 2. STRICT DEFAULT LOCKOUT: If they already changed the password, kill "dinesh123" forever
       if (adminData.is_default === false && pwdCurrentInput === 'dinesh123') {
         setPwdStatusMessage({ text: "Action Denied: 'dinesh123' has been permanently deactivated.", isError: true });
         return;
       }
-  
-      // 3. Validate authorization (Checks old password OR the old backup key)
       if (pwdCurrentInput !== adminData.password && pwdCurrentInput !== masterBackupKey) {
         setPwdStatusMessage({ text: 'Current pin mismatch. Use valid backup key if forgotten.', isError: true });
         return;
       }
-  
-      // 4. Generate a unique 8-character string for the new Emergency Recovery Key
       const randomSegment = Math.random().toString(36).substring(2, 10).toUpperCase();
       const recoveryKey = `COACH-SEC-${randomSegment}`;
-  
-      // 5. Update database: Rewrite password, set is_default to false, and store the new key
-      const { error: updateError } = await supabase
-        .from('settings')
-        .update({ 
-          password: pwdNewInput.trim(),
-          is_default: false,           // Hard-locks 'dinesh123' from being used ever again
-          recovery_key: recoveryKey    // Overwrites the backup storage matrix
-        })
-        .eq('id', 1);                  // Updates Dinesh's specific configurations row
-  
+      const { error: updateError } = await supabase.from('settings').update({ password: pwdNewInput.trim(), is_default: false, recovery_key: recoveryKey }).eq('id', 1);
       if (updateError) throw updateError;
-  
-      // 6. Update local app state variables on successful compilation
       setCurrentStoredPassword(pwdNewInput.trim());
-      setGeneratedKey(recoveryKey); // Triggers the visual orange box display code we set up
-      
+      setGeneratedKey(recoveryKey); 
       setPwdStatusMessage({ text: 'Access credential completely remixed inside database!', isError: false });
       setPwdCurrentInput('');
       setPwdNewInput('');
-  
     } catch (err) {
       setPwdStatusMessage({ text: `Update aborted: ${err.message}`, isError: true });
     }
   };
+
   // =========================================================================
-  // SAFEST HIGH-PERFORMANCE STORAGE ENGINE (PATH & FOLDER SANITIZED)
+  // SAFEST MULTIMEDIA CORE FILE STREAM STORAGE ROUTER
   // =========================================================================
   const processFileUploadStream = async (e, targetBlock) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
     setIsUploading(true);
-
     try {
       for (const file of Array.from(files)) {
         const fileExt = file.name.split('.').pop() || 'bin';
-        
         let folderMapping = 'general';
         if (targetBlock === 'hero') folderMapping = 'hero';
         if (targetBlock === 'gallery') folderMapping = 'gallery';
         if (targetBlock === 'transformation') folderMapping = 'transformations';
-        if (targetBlock === 'sub_media_uploader' || targetBlock === 'sub_video_uploader') {
-          folderMapping = 'timeline';
-        }
+        if (targetBlock === 'sub_media_uploader' || targetBlock === 'sub_video_uploader') folderMapping = 'timeline';
 
-        // Sanitize folder names explicitly
         const cleanFolder = folderMapping.replace(/^\/+|\/+$/g, '').trim(); 
-        
         const uniqueString = Math.random().toString(36).substring(2, 7);
-        const cleanOriginalName = file.name.split('.')[0]
-          .toLowerCase()
-          .replace(/[^a-z0-9]/g, '-') 
-          .replace(/-+/g, '-');       
-        
+        const cleanOriginalName = file.name.split('.')[0].toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');       
         const fileName = `${Date.now()}-${uniqueString}-${cleanOriginalName}.${fileExt}`;
-        
-        // CRITICAL PATH CLEANSE SYSTEM
-        const filePath = `${cleanFolder}/${fileName}`
-          .replace(/\/+/g, '/')
-          .replace(/^\/|\/$/g, '')
-          .trim();
+        const filePath = `${cleanFolder}/${fileName}`.replace(/\/+/g, '/').replace(/^\/|\/$/g, '').trim();
 
-        const { error: uploadError } = await supabase.storage
-          .from('coach-media')
-          .upload(filePath, file, { cacheControl: '3600', upsert: true });
-
+        const { error: uploadError } = await supabase.storage.from('coach-media').upload(filePath, file, { cacheControl: '3600', upsert: true });
         if (uploadError) throw uploadError;
 
-        const { data: { publicUrl } } = supabase.storage
-          .from('coach-media')
-          .getPublicUrl(filePath);
+        const { data: { publicUrl } } = supabase.storage.from('coach-media').getPublicUrl(filePath);
 
         if (targetBlock === 'hero') {
           setHeroImage(publicUrl);
@@ -267,13 +224,13 @@ export default function Home() {
     }
   };
 
+  // =========================================================================
+  // ARCHIVE METRIC ACTION HANDLERS
+  // =========================================================================
   const deleteGalleryItem = async (id) => {
     const updated = galleryList.filter(item => item.id !== id);
     setGalleryList(updated);
     await supabase.from('gallery').delete().eq('id', id);
-    if (activeGalleryIdx >= updated.length && updated.length > 0) {
-      setActiveGalleryIdx(updated.length - 1);
-    }
   };
 
   const removeStagedMediaElement = (idx) => {
@@ -285,7 +242,6 @@ export default function Home() {
       alert('Please compile mandatory metric parameters: Name, Before, and After Weights.');
       return;
     }
-
     const uniqueId = Date.now();
     const compiledItem = {
       id: uniqueId,
@@ -317,12 +273,13 @@ export default function Home() {
     await supabase.from('transformations').delete().eq('id', id);
   };
 
+  // =========================================================================
+  // CUSTOM INTAKE SCHEMA ENGINE COMPILER (WITH STEP DISPATCH ROUTING)
+  // =========================================================================
   const addNewCustomSchemaField = async () => {
     if (!newFieldLabel.trim()) return;
     
     const generatedId = 'field_' + Date.now();
-    
-    // Process the comma-separated string into a clean array for multiple choice fields
     const cleanOptions = rawOptions
       ? rawOptions.split(',').map(o => o.trim()).filter(o => o.length > 0)
       : [];
@@ -330,30 +287,26 @@ export default function Home() {
     const cleanField = {
       id: generatedId,
       label: newFieldLabel,
-      type: newFieldType || 'text', // Dynamic selection instead of hardcoded 'text'
+      type: newFieldType || 'text', 
+      step: parseInt(newFieldStep) || 3, // Safely attaches target step assignments
       required: !!newFieldRequired,
       placeholder: `Enter ${newFieldLabel}`,
-      // Only include options array if 'radio' type is selected
       ...(newFieldType === 'radio' && { options: cleanOptions })
     };
 
     const alteredSchema = [...formFields, cleanField];
 
     try {
-      // Optimistically update local UI state immediately
       setFormFields(alteredSchema);
-
-      // Sync updated array to your Supabase engine layout configuration
       const { error } = await supabase
         .from('form_schema')
         .upsert({ key: 'custom_fields', fields: alteredSchema });
 
       if (error) throw error;
 
-      // Reset configuration panel field input variables
       setNewFieldLabel('');
-      if (setRawOptions) setRawOptions('');
-      if (setNewFieldRequired) setNewFieldRequired(false);
+      setRawOptions('');
+      setNewFieldRequired(false);
     } catch (err) {
       console.error("Database upsert failed:", err);
       alert("Transmission failed. Schema configuration could not sync.");
@@ -366,7 +319,11 @@ export default function Home() {
     await supabase.from('form_schema').upsert({ key: 'custom_fields', fields: alteredSchema });
   };
 
+  // =========================================================================
+  // DYNAMIC COMPILER INTAKE & DISPATCH OVERLAYS
+  // =========================================================================
   const triggerEnquiryModal = (chosenPlanName = '') => {
+    setFormStep(1);
     setSelectedPlanContext(chosenPlanName);
     const structuredBlankMap = {};
     formFields.forEach(f => { structuredBlankMap[f.id] = ''; });
@@ -375,19 +332,32 @@ export default function Home() {
   };
 
   const handleDynamicEnquirySubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     let compiledMessage = `⚡ *NEW TEAM DINESH INTAKE ENTRY* ⚡\n\n` +
                           `🔥 *Program Route:* ${selectedPlanContext || 'General Elite Program Admission'}\n` +
-                          `──────────────────────\n`;
+                          `──────────────────────\n` +
+                          `🔸 *Name:* ${dynamicEnquiryData.name || 'Not Specified'}\n` +
+                          `🔸 *Mobile:* ${dynamicEnquiryData.phone || 'Not Specified'}\n` +
+                          `🔸 *Age:* ${dynamicEnquiryData.age || 'Not Specified'}\n`;
+
     formFields.forEach(f => {
-      const clientVal = dynamicEnquiryData[f.id] || 'Not specified';
-      compiledMessage += `🔸 *${f.label}:* ${clientVal}\n`;
+      const lowerLabel = f.label.toLowerCase();
+      if (!lowerLabel.includes('name') && !lowerLabel.includes('age') && !lowerLabel.includes('mobile')) {
+        const clientVal = dynamicEnquiryData[f.id] || 'Not specified';
+        compiledMessage += `🔸 *${f.label}:* ${clientVal}\n`;
+      }
     });
-    compiledMessage += `──────────────────────\n🚀 _Sent from Team Dinesh Platform. Waiting for review._`;
+
+    compiledMessage += `🔸 *Target Program:* ${dynamicEnquiryData.program || 'Elite 1-on-1 Transformation Tier'}\n`;
+    compiledMessage += `──────────────────────\n🚀 _Sent from Team Dinesh Platform._`;
     window.open(`https://wa.me/${coachWhatsAppNumber}?text=${encodeURIComponent(compiledMessage)}`, '_blank');
     setIsEnquiryOpen(false);
+    setFormStep(1);
   };
 
+  // =========================================================================
+  // CORE COMPONENT GRAPHICS VIEW PLATFORM (JSX RETURN)
+  // =========================================================================
   return (
     <main style={{ backgroundColor: '#060608', color: '#ffffff', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', position: 'relative', overflowX: 'hidden' }}>
       
@@ -431,13 +401,15 @@ export default function Home() {
           <p style={{ color: '#a1a1aa', fontSize: '16px', lineHeight: '1.65', margin: '0 0 40px 0', maxWidth: '560px' }}>
             The ultimate premium fitness engine built for peak transformation milestones. Custom nutrition mapping models, professional workout matrices, and daily structural accountability tracks.
           </p>
-          <button onClick={() => triggerEnquiryModal('General Elite Program Admission')} style={{ padding: '20px 38px', backgroundColor: uiColorMode, border: 'none', color: '#000000', fontWeight: '900', fontSize: '13px', letterSpacing: '0.5px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: `0 12px 30px rgba(245,158,11,0.25)` }}>
+          <button 
+            onClick={() => triggerEnquiryModal('General Elite Program Admission')} 
+            style={{ padding: '20px 38px', backgroundColor: uiColorMode, border: 'none', color: '#000000', fontWeight: '900', fontSize: '13px', letterSpacing: '0.5px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: `0 12px 30px rgba(245,158,11,0.25)` }}
+          >
             START YOUR JOURNEY NOW <ChevronRight size={18} />
           </button>
         </div>
       </section>
 
-      
       {/* TRANSFORMATIONS PORTFOLIOS GRID */}
       <section style={{ position: 'relative', zIndex: 10, padding: '60px 40px', maxWidth: '1200px', margin: '0 auto', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '36px' }}>
@@ -447,8 +419,8 @@ export default function Home() {
           </div>
           {transformations.length > 3 && (
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setActiveTransIdx(p => p === 0 ? transformations.length - 1 : p - 1)} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#ffffff', cursor: 'pointer', padding: '12px', borderRadius: '8px' }}><ChevronLeft size={16} /></button>
-              <button onClick={() => setActiveTransIdx(p => (p + 1) % transformations.length)} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#ffffff', cursor: 'pointer', padding: '12px', borderRadius: '8px' }}><ChevronRight size={16} /></button>
+              <button type="button" onClick={() => setActiveTransIdx(p => p === 0 ? transformations.length - 1 : p - 1)} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#ffffff', cursor: 'pointer', padding: '12px', borderRadius: '8px' }}><ChevronLeft size={16} /></button>
+              <button type="button" onClick={() => setActiveTransIdx(p => (p + 1) % transformations.length)} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#ffffff', cursor: 'pointer', padding: '12px', borderRadius: '8px' }}><ChevronRight size={16} /></button>
             </div>
           )}
         </div>
@@ -458,9 +430,9 @@ export default function Home() {
             {transformations.slice(activeTransIdx, activeTransIdx + 3).concat(transformations.slice(0, Math.max(0, 3 - (transformations.length - activeTransIdx)))).slice(0, Math.min(transformations.length, 3)).map((item) => (
               <div key={item.id} onClick={() => { setSelectedTransformation(item); setActiveMediaIndex(0); }} style={{ backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '20px', overflow: 'hidden', cursor: 'pointer' }}>
                 <div style={{ width: '100%', height: '360px', position: 'relative', backgroundColor: '#040406' }}>
-                  <img src={item.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                  <img src={item.img} style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000000' }} alt="" />
                   <div style={{ position: 'absolute', bottom: '18px', left: '18px', backgroundColor: '#10b981', color: '#ffffff', fontSize: '11px', fontWeight: '900', padding: '6px 12px', borderRadius: '6px' }}>
-                    {item.lossGainText.toUpperCase()}
+                    {item.lossGainText ? item.lossGainText.toUpperCase() : 'METRIC'}
                   </div>
                   {item.mediaTimeline && item.mediaTimeline.length > 1 && (
                     <div style={{ position: 'absolute', top: '18px', left: '18px', backgroundColor: 'rgba(6,6,8,0.8)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff', fontSize: '10px', fontWeight: '800', padding: '5px 10px', borderRadius: '6px' }}>
@@ -468,15 +440,15 @@ export default function Home() {
                     </div>
                   )}
                   <div style={{ position: 'absolute', top: '18px', right: '18px', backgroundColor: 'rgba(6,6,8,0.8)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)', padding: '5px 12px', borderRadius: '6px', fontSize: '11px', color: uiColorMode, fontWeight: '800' }}>
-                    {item.days.toUpperCase()}
+                    {item.days ? item.days.toUpperCase() : ''}
                   </div>
                 </div>
 
                 <div style={{ padding: '28px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', marginBottom: '16px' }}>
                     <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900' }}>{item.name} <span style={{ color: '#71717a', fontWeight: '500', fontSize: '15px' }}>• {item.age} yrs</span></h3>
                     <div style={{ display: 'flex', gap: '3px', color: uiColorMode }}>
-                      {[...Array(item.rating)].map((_, i) => <Star key={i} size={13} fill="currentColor" />)}
+                      {[...Array(item.rating || 5)].map((_, i) => <Star key={i} size={13} fill="currentColor" />)}
                     </div>
                   </div>
 
@@ -504,13 +476,11 @@ export default function Home() {
           </div>
         )}
       </section>
-{/* FIXED PLAYBACK PLATFORM MODAL */}
-{selectedTransformation && (
+
+      {/* FIXED PLAYBACK PLATFORM MODAL */}
+      {selectedTransformation && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(4,4,6,0.96)', backdropFilter: 'blur(24px)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          {/* Sizing and Layout Constraints Added Below */}
           <div style={{ width: '100%', maxWidth: '900px', height: '520px', backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', overflow: 'hidden', display: 'flex', flexWrap: 'nowrap', boxShadow: '0 40px 90px rgba(0,0,0,0.85)', boxSizing: 'border-box' }}>
-            
-            {/* Left Media Block: Hardcoded 1:1 distribution width to block browser layout scaling */}
             <div style={{ position: 'relative', backgroundColor: '#020204', width: '50%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {selectedTransformation.mediaTimeline && selectedTransformation.mediaTimeline.length > 0 ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -521,16 +491,10 @@ export default function Home() {
                       <video src={selectedTransformation.mediaTimeline[activeMediaIndex].url} style={{ width: '100%', height: '100%', objectFit: 'contain' }} controls autoPlay muted playsInline loop />
                     </div>
                   )}
-
                   {selectedTransformation.mediaTimeline.length > 1 && (
                     <>
                       <button type="button" onClick={(e) => { e.stopPropagation(); setActiveMediaIndex(p => p === 0 ? selectedTransformation.mediaTimeline.length - 1 : p - 1); }} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(6,6,8,0.75)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}><ChevronLeft size={18} /></button>
                       <button type="button" onClick={(e) => { e.stopPropagation(); setActiveMediaIndex(p => (p + 1) % selectedTransformation.mediaTimeline.length); }} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(6,6,8,0.75)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}><ChevronRight size={18} /></button>
-                      <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 20 }}>
-                        {selectedTransformation.mediaTimeline.map((_, i) => (
-                          <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: i === activeMediaIndex ? uiColorMode : 'rgba(255,255,255,0.3)' }} />
-                        ))}
-                      </div>
                     </>
                   )}
                 </div>
@@ -538,8 +502,6 @@ export default function Home() {
                 <img src={selectedTransformation.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
               )}
             </div>
-
-            {/* Right Information Panel Block: Flex-grow layout space */}
             <div style={{ width: '50%', height: '100%', padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderLeft: '1px solid rgba(255,255,255,0.04)', boxSizing: 'border-box', overflowY: 'auto' }}>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
@@ -549,11 +511,9 @@ export default function Home() {
                   </div>
                   <button type="button" onClick={() => setSelectedTransformation(null)} style={{ background: 'none', border: 'none', color: '#71717a', cursor: 'pointer' }}><X size={22} /></button>
                 </div>
-                
                 <div style={{ display: 'inline-block', backgroundColor: 'rgba(16,185,129,0.08)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', fontSize: '11px', fontWeight: '900', padding: '6px 14px', borderRadius: '6px', marginBottom: '24px' }}>
                   {selectedTransformation.lossGainText ? selectedTransformation.lossGainText.toUpperCase() : 'TRANSFORMATION'} ({selectedTransformation.days ? selectedTransformation.days.toUpperCase() : ''})
                 </div>
-                
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
                   <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '14px', borderRadius: '10px' }}>
                     <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>Initial Base Mass</span>
@@ -564,18 +524,15 @@ export default function Home() {
                     <span style={{ fontSize: '16px', fontWeight: '900', color: uiColorMode }}>{selectedTransformation.afterWeight}</span>
                   </div>
                 </div>
-                
                 <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#52525b', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '800' }}>Evolutionary Metric Narrative</h4>
-                  <p style={{ margin: 0, color: '#d4d4d8', fontSize: '13px', lineHeight: '1.5', maxHeight: '100px', overflowY: 'auto' }}>{selectedTransformation.journeyText}</p>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800' }}>Evolutionary Metric Narrative</h4>
+                  <p style={{ margin: 0, color: '#d4d4d8', fontSize: '13px', lineHeight: '1.5' }}>{selectedTransformation.journeyText}</p>
                 </div>
               </div>
-              
-              <button type="button" onClick={() => { setSelectedTransformation(null); triggerEnquiryModal?.(`Inspired by Result Profile: ${selectedTransformation.name}`); }} style={{ width: '100%', padding: '14px', backgroundColor: uiColorMode, color: '#000000', border: 'none', borderRadius: '10px', fontWeight: '900', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', flexShrink: 0 }}>
+              <button type="button" onClick={() => { setSelectedTransformation(null); triggerEnquiryModal(`Inspired by Result Profile: ${selectedTransformation.name}`); }} style={{ width: '100%', padding: '14px', backgroundColor: uiColorMode, color: '#000000', border: 'none', borderRadius: '10px', fontWeight: '900', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
                 GET RESULTS LIKE THIS <ChevronRight size={16} />
               </button>
             </div>
-
           </div>
         </div>
       )}
@@ -650,55 +607,173 @@ export default function Home() {
         </div>
       </section>
 
-     {/* ENTRY ACQUISITION INTAKE FORM */}
-     {isEnquiryOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(4,4,6,0.92)', backdropFilter: 'blur(20px)', zIndex: 110000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ width: '100%', maxWidth: '480px', backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '32px', boxSizing: 'border-box' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900' }}>START TRANSFORMATION</h3>
-                <span style={{ fontSize: '12px', color: uiColorMode, display: 'block', marginTop: '2px', fontWeight: '600' }}>Context: {selectedPlanContext}</span>
-              </div>
-              <button onClick={() => setIsEnquiryOpen(false)} style={{ background: 'none', border: 'none', color: '#52525b', cursor: 'pointer' }}><X size={22} /></button>
-            </div>
+      {/* ENTRY ACQUISITION INTAKE FORM */}
+      {isEnquiryOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(4,4,6,0.96)', backdropFilter: 'blur(24px)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ width: '100%', maxWidth: '540px', backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '32px', boxShadow: '0 40px 90px rgba(0,0,0,0.85)', boxSizing: 'border-box' }}>
             
-            <form onSubmit={handleDynamicEnquirySubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {formFields.map((field) => (
-                <div key={field.id}>
-                  <label style={{ display: 'block', fontSize: '11px', color: '#a1a1aa', marginBottom: '6px', fontWeight: '700', textTransform: 'uppercase' }}>
-                    {field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
-                  </label>
-                  
-                  {/* Conditionally choose between dropdown select list vs regular type text/number inputs */}
-                  {field.type === 'radio' ? (
-                    <select
-                      required={field.required}
-                      value={dynamicEnquiryData[field.id] || ''}
-                      onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })}
-                      style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
-                    >
-                      <option value="" disabled hidden>Select your plan / option...</option>
-                      {field.options && field.options.map((option, idx) => (
-                        <option key={idx} value={option} style={{ backgroundColor: '#0c0c10', color: '#ffffff' }}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <input 
-                      required={field.required}
-                      type={field.type || 'text'} 
-                      placeholder={field.placeholder} 
-                      value={dynamicEnquiryData[field.id] || ''} 
-                      onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} 
-                      style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '14px' }}
-                    />
-                  )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Start Transformation</h3>
+                <span style={{ color: '#a1a1aa', fontSize: '11px', display: 'block', marginTop: '2px' }}>Context: {selectedPlanContext || 'General Elite Program Admission'}</span>
+              </div>
+              <button type="button" onClick={() => { setIsEnquiryOpen(false); setFormStep(1); }} style={{ background: 'none', border: 'none', color: '#71717a', cursor: 'pointer' }}><X size={20} /></button>
+            </div>
+
+            <div style={{ marginBottom: '28px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>
+                <span>Step {formStep} of {totalSteps}</span>
+                <span style={{ color: uiColorMode }}>{Math.round(((formStep - 1) / (totalSteps - 1)) * 100)}% Complete</span>
+              </div>
+              <div style={{ display: 'flex', gap: '4px', width: '100%', height: '3px', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: '2px', overflow: 'hidden' }}>
+                {[...Array(totalSteps)].map((_, idx) => (
+                  <div key={idx} style={{ flex: 1, height: '100%', backgroundColor: idx + 1 <= formStep ? uiColorMode : 'transparent', transition: 'background-color 0.3s ease' }} />
+                ))}
+              </div>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); if (formStep === totalSteps) { handleDynamicEnquirySubmit(); } }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* STEP 1: INITIAL RECOGNITION DATA */}
+              {formStep === 1 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Personal Identity</div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Full Name *</label>
+                    <input type="text" required placeholder="Enter Name" value={dynamicEnquiryData.name || ''} onChange={(e) => setDynamicEnquiryData({...dynamicEnquiryData, name: e.target.value})} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Mobile No *</label>
+                    <input type="tel" required placeholder="Enter Mobile no" value={dynamicEnquiryData.phone || ''} onChange={(e) => setDynamicEnquiryData({...dynamicEnquiryData, phone: e.target.value})} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
+                  </div>
+
+                  {/* Dynamic Fields Scheduled for Step 1 */}
+                  {formFields && formFields.filter(f => (f.step === 1 || !f.step)).map((field) => {
+                    const lowerLabel = field.label.toLowerCase();
+                    if (lowerLabel.includes('name') || lowerLabel.includes('mobile')) return null;
+                    return (
+                      <div key={field.id}>
+                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>{field.label} {field.required && '*'}</label>
+                        {field.type === 'radio' || (field.options && field.options.length > 0) ? (
+                          <select required={field.required} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '13px', height: '48px' }}>
+                            <option value="" disabled hidden>Select option...</option>
+                            {field.options.map((option, idx) => <option key={idx} value={option}>{option}</option>)}
+                          </select>
+                        ) : (
+                          <input type={field.type || 'text'} required={field.required} placeholder={`Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-              <button type="submit" style={{ width: '100%', padding: '16px', backgroundColor: uiColorMode, color: '#000000', border: 'none', borderRadius: '10px', fontWeight: '900', marginTop: '10px', fontSize: '13px' }}>
-                SUBMIT PROFILE DATA TO COACH
-              </button>
+              )}
+
+              {/* STEP 2: PROFILE PHYSICAL VECTORS */}
+              {formStep === 2 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Physical Vitals</div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Age *</label>
+                    <input type="number" required placeholder="Enter Age" value={dynamicEnquiryData.age || ''} onChange={(e) => setDynamicEnquiryData({...dynamicEnquiryData, age: e.target.value})} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
+                  </div>
+
+                  {/* Dynamic Fields Scheduled for Step 2 */}
+                  {formFields && formFields.filter(f => f.step === 2).map((field) => {
+                    if (field.label.toLowerCase().includes('age')) return null;
+                    return (
+                      <div key={field.id}>
+                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>{field.label} {field.required && '*'}</label>
+                        {field.type === 'radio' || (field.options && field.options.length > 0) ? (
+                          <select required={field.required} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '13px', height: '48px' }}>
+                            <option value="" disabled hidden>Select option...</option>
+                            {field.options.map((option, idx) => <option key={idx} value={option}>{option}</option>)}
+                          </select>
+                        ) : (
+                          <input type={field.type || 'text'} required={field.required} placeholder={`Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* STEP 3: DYNAMIC CONFIGURABLE INTAKE SCHEMAS */}
+              {formStep === 3 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Fitness Blueprint Parameters</div>
+                  
+                  {/* Dynamic Fields Scheduled for Step 3 */}
+                  {formFields && formFields.filter(f => f.step === 3).map((field) => (
+                    <div key={field.id}>
+                      <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>{field.label} {field.required && '*'}</label>
+                      {field.type === 'radio' || (field.options && field.options.length > 0) ? (
+                        <select required={field.required} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '13px', height: '48px' }}>
+                          <option value="" disabled hidden>Select option...</option>
+                          {field.options.map((option, idx) => <option key={idx} value={option}>{option}</option>)}
+                        </select>
+                      ) : (
+                        <input type={field.type || 'text'} required={field.required} placeholder={`Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* STEP 4: ROUTE SELECTION BLUEPRINT */}
+              {formStep === 4 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Target Settings</div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Program Option Tier *</label>
+                    <select required value={dynamicEnquiryData.program || ''} onChange={(e) => setDynamicEnquiryData({...dynamicEnquiryData, program: e.target.value})} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '13px', height: '48px' }}>
+                      <option value="" disabled hidden>Select structural track tier...</option>
+                      <option value="Elite 1-on-1 Transformation Tier">Elite 1-on-1 Transformation Tier</option>
+                      <option value="General Strength Programming">General Strength Programming</option>
+                      <option value="Custom Nutritional Meal Blueprint Only">Custom Nutritional Meal Blueprint Only</option>
+                    </select>
+                  </div>
+
+                  {/* Dynamic Fields Scheduled for Step 4 */}
+                  {formFields && formFields.filter(f => f.step === 4).map((field) => (
+                    <div key={field.id}>
+                      <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>{field.label} {field.required && '*'}</label>
+                      {field.type === 'radio' || (field.options && field.options.length > 0) ? (
+                        <select required={field.required} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '13px', height: '48px' }}>
+                          <option value="" disabled hidden>Select option...</option>
+                          {field.options.map((option, idx) => <option key={idx} value={option}>{option}</option>)}
+                        </select>
+                      ) : (
+                        <input type={field.type || 'text'} required={field.required} placeholder={`Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* NAVIGATION WIZARD ACTION FOOTER */}
+              <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+                {formStep > 1 && (
+                  <button type="button" onClick={() => setFormStep(prev => prev - 1)} style={{ flex: 1, padding: '16px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#ffffff', borderRadius: '12px', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}>← BACK</button>
+                )}
+                {formStep < totalSteps ? (
+                  <button type="button" onClick={() => {
+                    if (formStep === 1 && (!dynamicEnquiryData.name || !dynamicEnquiryData.phone)) return alert('Identity verification parameters are incomplete.');
+                    if (formStep === 2 && !dynamicEnquiryData.age) return alert('Vitals tracking markers are incomplete.');
+                    
+                    // Client side validations for dynamically added active fields
+                    let activeFields = formFields.filter(f => f.step === formStep || (formStep === 1 && !f.step));
+                    for (let f of activeFields) {
+                      if (f.required && !dynamicEnquiryData[f.id]) return alert(`"${f.label}" is required before moving to the next step.`);
+                    }
+                    setFormStep(prev => prev + 1);
+                  }} style={{ flex: 2, padding: '16px', backgroundColor: '#ffffff', border: 'none', color: '#000000', borderRadius: '12px', fontWeight: '900', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    NEXT STEP <ChevronRight size={16} />
+                  </button>
+                ) : (
+                  <button type="submit" style={{ flex: 2, padding: '16px', backgroundColor: uiColorMode, border: 'none', color: '#000000', borderRadius: '12px', fontWeight: '900', fontSize: '13px', cursor: 'pointer' }}>SUBMIT PROFILE DATA TO COACH</button>
+                )}
+              </div>
+
             </form>
           </div>
         </div>
@@ -725,142 +800,77 @@ export default function Home() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '28px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
                 
-               {/* DYNAMIC SECURITY MANAGEMENT MATRIX */}
-<div style={{ backgroundColor: 'rgba(245,158,11,0.02)', padding: '18px', borderRadius: '14px', border: `1px solid rgba(245,158,11,0.15)` }}>
-  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: uiColorMode, marginBottom: '14px', fontWeight: '900' }}>
-    <Key size={14} /> 🔐 SECURITY CREDENTIAL MANAGEMENT
-  </label>
-  
-  <form onSubmit={handlePasswordUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-    <input 
-      type="password" 
-      placeholder="Verify Current Password / Backup Key" 
-      value={pwdCurrentInput}
-      onChange={(e) => setPwdCurrentInput(e.target.value)}
-      style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px' }}
-      required
-    />
-    <input 
-      type="password" 
-      placeholder="Generate New Terminal Pass-Pin" 
-      value={pwdNewInput}
-      onChange={(e) => setPwdNewInput(e.target.value)}
-      style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px' }}
-      required
-    />
-    <button type="submit" style={{ width: '100%', backgroundColor: uiColorMode, color: '#000000', fontSize: '11px', padding: '10px', borderRadius: '8px', fontWeight: '900', border: 'none', cursor: 'pointer' }}>
-      REWRITE SECURITY MATRIX
-    </button>
-  </form>
+                {/* SECURITY CREDENTIAL MANAGEMENT */}
+                <div style={{ backgroundColor: 'rgba(245,158,11,0.02)', padding: '18px', borderRadius: '14px', border: `1px solid rgba(245,158,11,0.15)` }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: uiColorMode, marginBottom: '14px', fontWeight: '900' }}><Key size={14} /> 🔐 SECURITY CREDENTIAL MANAGEMENT</label>
+                  <form onSubmit={handlePasswordUpdate} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <input type="password" placeholder="Verify Current Password / Backup Key" value={pwdCurrentInput} onChange={(e) => setPwdCurrentInput(e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px' }} required />
+                    <input type="password" placeholder="Generate New Terminal Pass-Pin" value={pwdNewInput} onChange={(e) => setPwdNewInput(e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px' }} required />
+                    <button type="submit" style={{ width: '100%', backgroundColor: uiColorMode, color: '#000000', fontSize: '11px', padding: '10px', borderRadius: '8px', fontWeight: '900', border: 'none', cursor: 'pointer' }}>REWRITE SECURITY MATRIX</button>
+                  </form>
+                  {generatedKey && (
+                    <div style={{ marginTop: '14px', backgroundColor: 'rgba(245, 158, 11, 0.1)', border: '1px dashed #f59e0b', padding: '12px', borderRadius: '8px', color: '#ffffff' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '900', color: '#f59e0b', marginBottom: '4px' }}>⚠️ COPY EMERGENCY BACKUP CODE:</div>
+                      <div style={{ fontSize: '14px', fontWeight: '900', textAlign: 'center', letterSpacing: '1px', color: uiColorMode }}>{generatedKey}</div>
+                    </div>
+                  )}
+                  {pwdStatusMessage.text && <div style={{ marginTop: '10px', fontSize: '11px', fontWeight: '700', textAlign: 'center', color: pwdStatusMessage.isError ? '#ef4444' : '#10b981' }}>{pwdStatusMessage.text}</div>}
+                </div>
 
-  {/* EMERGENCY RECOVERY KEY DISPLAY */}
-  {generatedKey && (
-    <div style={{
-      marginTop: '14px',
-      backgroundColor: 'rgba(245, 158, 11, 0.1)',
-      border: '1px dashed #f59e0b',
-      padding: '12px',
-      borderRadius: '8px',
-      color: '#ffffff'
-    }}>
-      <div style={{ fontSize: '10px', fontWeight: '900', color: '#f59e0b', marginBottom: '4px' }}>
-        ⚠️ COPY EMERGENCY BACKUP CODE:
-      </div>
-      <div style={{ fontSize: '14px', fontWeight: '900', textAlign: 'center', letterSpacing: '1px', color: uiColorMode }}>
-        {generatedKey}
-      </div>
-      <div style={{ fontSize: '9px', marginTop: '6px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.3' }}>
-        The default password 'dinesh123' has been permanently deactivated. Keep this backup key secure to restore access if forgotten.
-      </div>
-    </div>
-  )}
-
-  {pwdStatusMessage.text && (
-    <div style={{ marginTop: '10px', fontSize: '11px', fontWeight: '700', textAlign: 'center', color: pwdStatusMessage.isError ? '#ef4444' : '#10b981' }}>
-      {pwdStatusMessage.text}
-    </div>
-  )}
-</div>
-
-               {/* DYNAMIC SCHEMA FIELD CONFIGURATOR */}
-               <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', padding: '18px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                {/* DYNAMIC SCHEMA FIELD CONFIGURATOR (WITH NEW STEP CONTROLLER Dropdown) */}
+                <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', padding: '18px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <label style={{ display: 'block', fontSize: '11px', color: uiColorMode, marginBottom: '10px', fontWeight: '900', textTransform: 'uppercase' }}>⚙️ ENTRY INTAKE SCHEMA ENGINE</label>
                   
-                  {/* Render list of existing schema fields */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
                     {formFields && formFields.map(f => (
                       <div key={f.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#0c0c10', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <span style={{ fontSize: '12px', color: '#ffffff' }}>
-                            {f.label} {f.required && <span style={{ color: '#ef4444' }}>*</span>}
-                          </span>
-                          <span style={{ fontSize: '9px', color: '#a1a1aa', fontFamily: 'monospace', textTransform: 'uppercase' }}>
-                            Type: {f.type || 'text'} {f.options ? `[${f.options.join(', ')}]` : ''}
-                          </span>
+                          <span style={{ fontSize: '12px', color: '#ffffff' }}>{f.label} {f.required && <span style={{ color: '#ef4444' }}>*</span>}</span>
+                          <span style={{ fontSize: '9px', color: '#a1a1aa', fontFamily: 'monospace', textTransform: 'uppercase' }}>Step: {f.step || 1} • Type: {f.type || 'text'}</span>
                         </div>
-                        <button type="button" onClick={() => deleteSchemaFieldNode(f.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={14} /></button>
+                        <button type="button" onClick={() => deleteSchemaFieldNode(f.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
                       </div>
                     ))}
                   </div>
 
-                  {/* Inputs to add a new schema field */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px' }}>
+                    <input type="text" placeholder="Field Label (e.g., Current Weight)" value={newFieldLabel} onChange={(e) => setNewFieldLabel(e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }} />
+                    
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      <input 
-                        type="text" 
-                        placeholder="Custom Target Field Label" 
-                        value={newFieldLabel} 
-                        onChange={(e) => setNewFieldLabel(e.target.value)} 
-                        style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }} 
-                      />
-                      <select
-                        value={newFieldType || 'text'}
-                        onChange={(e) => setNewFieldType?.(e.target.value)}
-                        style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', boxSizing: 'border-box' }}
-                      >
+                      <select value={newFieldType || 'text'} onChange={(e) => setNewFieldType(e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }}>
                         <option value="text">Plain Text</option>
                         <option value="number">Number</option>
-                        <option value="radio">Options Select (Radio Buttons)</option>
+                        <option value="radio">Options Select</option>
+                      </select>
+
+                      {/* NEW: DESTINATION STEP ROUTER DROPDOWN */}
+                      <select value={newFieldStep} onChange={(e) => setNewFieldStep(e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: uiColorMode, fontWeight: '700', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }}>
+                        <option value={1}>Put on Step 1</option>
+                        <option value={2}>Put on Step 2</option>
+                        <option value={3}>Put on Step 3</option>
+                        <option value={4}>Put on Step 4</option>
                       </select>
                     </div>
 
-                    {/* Displays only if multiple choice fields are being built */}
                     {newFieldType === 'radio' && (
-                      <input 
-                        type="text" 
-                        placeholder="Options List (Separate choices with commas, e.g. Fat Loss, Muscle Gain)" 
-                        value={rawOptions || ''} 
-                        onChange={(e) => (setRawOptions ? setRawOptions(e.target.value) : null)} 
-                        style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }} 
-                      />
+                      <input type="text" placeholder="Options List (Separate with commas, e.g. Veg, Non-Veg)" value={rawOptions || ''} onChange={(e) => setRawOptions(e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }} />
                     )}
 
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#a1a1aa', cursor: 'pointer' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={!!newFieldRequired} 
-                        onChange={(e) => (setNewFieldRequired ? setNewFieldRequired(e.target.checked) : null)} 
-                      />
-                      Enforce verification requirement (*)
+                      <input type="checkbox" checked={!!newFieldRequired} onChange={(e) => setNewFieldRequired(e.target.checked)} /> Enforce verification requirement (*)
                     </label>
                     
-                    <button 
-                      type="button"
-                      onClick={addNewCustomSchemaField} 
-                      style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff', fontSize: '11px', padding: '10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', cursor: 'pointer' }}
-                    >
-                      <Plus size={14} /> APPEND SCHEMA COMPONENT
-                    </button>
+                    <button type="button" onClick={addNewCustomSchemaField} style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff', fontSize: '11px', padding: '10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', cursor: 'pointer' }}><Plus size={14} /> APPEND SCHEMA COMPONENT</button>
                   </div>
                 </div>
 
-                {/* 1. BACKGROUND HERO TARGET GRAPHIC */}
+                {/* BACKGROUND HERO IMAGE */}
                 <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', padding: '18px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <label style={{ display: 'block', fontSize: '11px', color: '#a1a1aa', marginBottom: '8px', fontWeight: '800', textTransform: 'uppercase' }}>1. Background Hero Target Graphic</label>
                   <input type="file" accept="image/*" onChange={(e) => processFileUploadStream(e, 'hero')} style={{ color: '#ffffff', fontSize: '12px' }} />
                 </div>
 
-                {/* 2. NEW OUTCOME TRANSFORMATION NODE */}
+                {/* OUTCOME TRANSFORMATION NODES */}
                 <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', padding: '18px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <label style={{ display: 'block', fontSize: '11px', color: '#a1a1aa', marginBottom: '8px', fontWeight: '800', textTransform: 'uppercase' }}>2. New Outcome Transformation Node</label>
                   <input type="file" accept="image/*" onChange={(e) => processFileUploadStream(e, 'transformation')} style={{ color: '#ffffff', fontSize: '12px', marginBottom: '16px' }} />
@@ -873,7 +883,7 @@ export default function Home() {
                           <img src={item.img} style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '6px' }} alt="" />
                           <span style={{ fontSize: '12px', fontWeight: '600' }}>{item.name} ({item.days})</span>
                         </div>
-                        <button type="button" onClick={(e) => deleteTransformationItem(item.id, e)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={15} /></button>
+                        <button type="button" onClick={(e) => deleteTransformationItem(item.id, e)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={15} /></button>
                       </div>
                     ))}
                   </div>
@@ -884,7 +894,8 @@ export default function Home() {
           </div>
         </div>
       )}
-      {/* ALBUM COMPILER MULTIMEDIA FRAME */}
+
+      {/* ALBUM COMPILER MULTIMEDIA METADATA MODAL */}
       {isTransMetaModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(4,4,6,0.98)', zIndex: 130000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
           <div style={{ width: '100%', maxWidth: '560px', backgroundColor: '#0c0c10', border: `1px solid ${uiColorMode}`, borderRadius: '24px', padding: '32px', maxHeight: '85vh', overflowY: 'auto' }}>
@@ -906,23 +917,16 @@ export default function Home() {
               <textarea rows={2} placeholder="Transformation Evolutionary Journey Narrative Logs..." value={newTransMeta.journeyText} onChange={(e) => setNewTransMeta({...newTransMeta, journeyText: e.target.value})} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '12px 14px', color: '#ffffff', borderRadius: '8px', resize: 'none', lineHeight: '1.5' }} />
             </div>
 
-            {/* INTERACTIVE TIMELINE ELEMENT ASSEMBLER */}
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '18px', marginBottom: '24px' }}>
               <label style={{ display: 'block', fontSize: '11px', color: uiColorMode, fontWeight: '900', marginBottom: '12px', textTransform: 'uppercase' }}>📸 MULTI-MEDIA TIMELINE BUILDER</label>
-              
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '16px' }}>
                 {tempMediaArray.map((med, idx) => (
                   <div key={idx} style={{ width: '64px', height: '64px', position: 'relative', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#000000' }}>
-                    {med.type === 'image' ? (
-                      <img src={med.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Film size={18} style={{ color: uiColorMode }} /></div>
-                    )}
+                    {med.type === 'image' ? <img src={med.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Film size={18} style={{ color: uiColorMode }} /></div>}
                     <button onClick={() => removeStagedMediaElement(idx)} style={{ position: 'absolute', top: '2px', right: '2px', background: '#ef4444', border: 'none', borderRadius: '50%', color: '#ffffff', width: '16px', height: '16px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900' }}>×</button>
                   </div>
                 ))}
               </div>
-
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
                   <span style={{ display: 'block', fontSize: '11px', color: '#a1a1aa', marginBottom: '6px', fontWeight: '700' }}>Append Strategy Frames (Images):</span>
