@@ -57,7 +57,8 @@ export default function Home() {
   // Schema Editor Staging Structs
   const [newFieldLabel, setNewFieldLabel] = useState('');
   const [newFieldRequired, setNewFieldRequired] = useState(false);
-
+  const [newFieldType, setNewFieldType] = useState('text');
+  const [rawOptions, setRawOptions] = useState('');
   // =========================================================================
   // CLOUD DATA HYDRATION ENGINE (SUPABASE DATA FETCHES)
   // =========================================================================
@@ -318,19 +319,45 @@ export default function Home() {
 
   const addNewCustomSchemaField = async () => {
     if (!newFieldLabel.trim()) return;
+    
     const generatedId = 'field_' + Date.now();
+    
+    // Process the comma-separated string into a clean array for multiple choice fields
+    const cleanOptions = rawOptions
+      ? rawOptions.split(',').map(o => o.trim()).filter(o => o.length > 0)
+      : [];
+
     const cleanField = {
       id: generatedId,
       label: newFieldLabel,
-      type: 'text',
-      required: newFieldRequired,
-      placeholder: `Enter ${newFieldLabel}`
+      type: newFieldType || 'text', // Dynamic selection instead of hardcoded 'text'
+      required: !!newFieldRequired,
+      placeholder: `Enter ${newFieldLabel}`,
+      // Only include options array if 'radio' type is selected
+      ...(newFieldType === 'radio' && { options: cleanOptions })
     };
+
     const alteredSchema = [...formFields, cleanField];
-    setFormFields(alteredSchema);
-    await supabase.from('form_schema').upsert({ key: 'custom_fields', fields: alteredSchema });
-    setNewFieldLabel('');
-    setNewFieldRequired(false);
+
+    try {
+      // Optimistically update local UI state immediately
+      setFormFields(alteredSchema);
+
+      // Sync updated array to your Supabase engine layout configuration
+      const { error } = await supabase
+        .from('form_schema')
+        .upsert({ key: 'custom_fields', fields: alteredSchema });
+
+      if (error) throw error;
+
+      // Reset configuration panel field input variables
+      setNewFieldLabel('');
+      if (setRawOptions) setRawOptions('');
+      if (setNewFieldRequired) setNewFieldRequired(false);
+    } catch (err) {
+      console.error("Database upsert failed:", err);
+      alert("Transmission failed. Schema configuration could not sync.");
+    }
   };
 
   const deleteSchemaFieldNode = async (id) => {
@@ -410,48 +437,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* GALLERY / ARCHIVE SECTION */}
-      <section style={{ position: 'relative', zIndex: 10, padding: '60px 40px', maxWidth: '1200px', margin: '0 auto', boxSizing: 'border-box' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '32px' }}>
-          <div>
-            <span style={{ color: uiColorMode, fontSize: '11px', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase' }}>CHAMPIONSHIP HISTORY ARCHIVE</span>
-            <h2 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 0 0', textTransform: 'uppercase', letterSpacing: '-0.5px' }}>POSING, TRAINING & MEDALS</h2>
-          </div>
-          {galleryList.length > 1 && (
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setActiveGalleryIdx(p => p === 0 ? galleryList.length - 1 : p - 1)} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#ffffff', cursor: 'pointer', padding: '12px', borderRadius: '8px' }}><ChevronLeft size={16} /></button>
-              <button onClick={() => setActiveGalleryIdx(p => (p + 1) % galleryList.length)} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#ffffff', cursor: 'pointer', padding: '12px', borderRadius: '8px' }}><ChevronRight size={16} /></button>
-            </div>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: '440px', height: '560px', overflow: 'hidden', borderRadius: '20px', backgroundColor: '#0d0d11', border: '1px solid rgba(255,255,255,0.05)', boxShadow: '0 30px 60px rgba(0,0,0,0.7)' }}>
-            {galleryList.length > 0 ? (
-              galleryList.map((item, idx) => (
-                <div key={item.id} style={{ position: 'absolute', inset: 0, opacity: idx === activeGalleryIdx ? 1 : 0, transform: `scale(${idx === activeGalleryIdx ? 1 : 0.96})`, transition: 'opacity 0.6s ease, transform 0.6s ease', zIndex: idx === activeGalleryIdx ? 5 : 1 }}>
-                  <img src={item.img} alt={item.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '50px 24px 24px 24px', background: 'linear-gradient(to top, rgba(6,6,8,0.98) 20%, transparent 100%)', zIndex: 10 }}>
-                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#ffffff', letterSpacing: '0.5px' }}>{item.title}</h4>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', color: '#52525b', textAlign: 'center', justifyContent: 'center' }}>
-                <Image size={44} style={{ strokeWidth: '1', marginBottom: '16px', color: 'rgba(255,255,255,0.08)' }} />
-                <p style={{ margin: 0, fontSize: '13px' }}>No archive presentation frames uploaded yet.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
+      
       {/* TRANSFORMATIONS PORTFOLIOS GRID */}
       <section style={{ position: 'relative', zIndex: 10, padding: '60px 40px', maxWidth: '1200px', margin: '0 auto', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '36px' }}>
           <div>
             <span style={{ color: uiColorMode, fontSize: '11px', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase' }}>VERIFIED LIVE ARCHIVES</span>
-            <h2 style={{ fontSize: '28px', fontWeight: '900', margin: '4px 0 0 0', textTransform: 'uppercase', letterSpacing: '-0.5px' }}>CLIENT TRANSMUTATIONS</h2>
+            <h2 style={{ fontSize: '28px', fontWeight: '900', margin: '4px 0 0 0', textTransform: 'uppercase', letterSpacing: '-0.5px' }}>CLIENT TRANSFORMATIONS</h2>
           </div>
           {transformations.length > 3 && (
             <div style={{ display: 'flex', gap: '8px' }}>
@@ -512,13 +504,14 @@ export default function Home() {
           </div>
         )}
       </section>
-
-      {/* FIXED PLAYBACK PLATFORM MODAL */}
-      {selectedTransformation && (
+{/* FIXED PLAYBACK PLATFORM MODAL */}
+{selectedTransformation && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(4,4,6,0.96)', backdropFilter: 'blur(24px)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ width: '100%', maxWidth: '960px', backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', overflow: 'hidden', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', boxShadow: '0 40px 90px rgba(0,0,0,0.85)' }}>
+          {/* Sizing and Layout Constraints Added Below */}
+          <div style={{ width: '100%', maxWidth: '900px', height: '520px', backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', overflow: 'hidden', display: 'flex', flexWrap: 'nowrap', boxShadow: '0 40px 90px rgba(0,0,0,0.85)', boxSizing: 'border-box' }}>
             
-            <div style={{ position: 'relative', backgroundColor: '#020204', height: '520px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {/* Left Media Block: Hardcoded 1:1 distribution width to block browser layout scaling */}
+            <div style={{ position: 'relative', backgroundColor: '#020204', width: '50%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               {selectedTransformation.mediaTimeline && selectedTransformation.mediaTimeline.length > 0 ? (
                 <div style={{ width: '100%', height: '100%', position: 'relative' }}>
                   {selectedTransformation.mediaTimeline[activeMediaIndex].type === 'image' ? (
@@ -531,8 +524,8 @@ export default function Home() {
 
                   {selectedTransformation.mediaTimeline.length > 1 && (
                     <>
-                      <button onClick={(e) => { e.stopPropagation(); setActiveMediaIndex(p => p === 0 ? selectedTransformation.mediaTimeline.length - 1 : p - 1); }} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(6,6,8,0.75)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}><ChevronLeft size={18} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); setActiveMediaIndex(p => (p + 1) % selectedTransformation.mediaTimeline.length); }} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(6,6,8,0.75)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}><ChevronRight size={18} /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setActiveMediaIndex(p => p === 0 ? selectedTransformation.mediaTimeline.length - 1 : p - 1); }} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(6,6,8,0.75)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}><ChevronLeft size={18} /></button>
+                      <button type="button" onClick={(e) => { e.stopPropagation(); setActiveMediaIndex(p => (p + 1) % selectedTransformation.mediaTimeline.length); }} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(6,6,8,0.75)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}><ChevronRight size={18} /></button>
                       <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 20 }}>
                         {selectedTransformation.mediaTimeline.map((_, i) => (
                           <div key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: i === activeMediaIndex ? uiColorMode : 'rgba(255,255,255,0.3)' }} />
@@ -546,34 +539,39 @@ export default function Home() {
               )}
             </div>
 
-            <div style={{ padding: '36px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderLeft: '1px solid rgba(255,255,255,0.04)' }}>
+            {/* Right Information Panel Block: Flex-grow layout space */}
+            <div style={{ width: '50%', height: '100%', padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderLeft: '1px solid rgba(255,255,255,0.04)', boxSizing: 'border-box', overflowY: 'auto' }}>
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                   <div>
-                    <h3 style={{ margin: 0, fontSize: '24px', fontWeight: '900' }}>{selectedTransformation.name}</h3>
-                    <span style={{ color: '#71717a', fontSize: '13px', display: 'block', marginTop: '2px' }}>Client Index Status: Verified • {selectedTransformation.date}</span>
+                    <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '900' }}>{selectedTransformation.name}</h3>
+                    <span style={{ color: '#71717a', fontSize: '12px', display: 'block', marginTop: '2px' }}>Client Index Status: Verified • {selectedTransformation.date}</span>
                   </div>
-                  <button onClick={() => setSelectedTransformation(null)} style={{ background: 'none', border: 'none', color: '#71717a', cursor: 'pointer' }}><X size={24} /></button>
+                  <button type="button" onClick={() => setSelectedTransformation(null)} style={{ background: 'none', border: 'none', color: '#71717a', cursor: 'pointer' }}><X size={22} /></button>
                 </div>
-                <div style={{ display: 'inline-block', backgroundColor: 'rgba(16,185,129,0.08)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', fontSize: '11px', fontWeight: '900', padding: '6px 14px', borderRadius: '6px', marginBottom: '28px' }}>
-                  {selectedTransformation.lossGainText.toUpperCase()} ({selectedTransformation.days.toUpperCase()})
+                
+                <div style={{ display: 'inline-block', backgroundColor: 'rgba(16,185,129,0.08)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', fontSize: '11px', fontWeight: '900', padding: '6px 14px', borderRadius: '6px', marginBottom: '24px' }}>
+                  {selectedTransformation.lossGainText ? selectedTransformation.lossGainText.toUpperCase() : 'TRANSFORMATION'} ({selectedTransformation.days ? selectedTransformation.days.toUpperCase() : ''})
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '28px' }}>
-                  <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '16px', borderRadius: '10px' }}>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+                  <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '14px', borderRadius: '10px' }}>
                     <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>Initial Base Mass</span>
-                    <span style={{ fontSize: '18px', fontWeight: '900', color: '#ffffff' }}>{selectedTransformation.beforeWeight}</span>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: '#ffffff' }}>{selectedTransformation.beforeWeight}</span>
                   </div>
-                  <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '16px', borderRadius: '10px' }}>
+                  <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '14px', borderRadius: '10px' }}>
                     <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>Target Attained</span>
-                    <span style={{ fontSize: '18px', fontWeight: '900', color: uiColorMode }}>{selectedTransformation.afterWeight}</span>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: uiColorMode }}>{selectedTransformation.afterWeight}</span>
                   </div>
                 </div>
-                <div style={{ marginBottom: '24px' }}>
-                  <h4 style={{ margin: '0 0 8px 0', fontSize: '11px', color: '#52525b', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '800' }}>Evolutionary Metric Narrative</h4>
-                  <p style={{ margin: 0, color: '#d4d4d8', fontSize: '14px', lineHeight: '1.6', maxHeight: '130px', overflowY: 'auto' }}>{selectedTransformation.journeyText}</p>
+                
+                <div style={{ marginBottom: '20px' }}>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#52525b', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '800' }}>Evolutionary Metric Narrative</h4>
+                  <p style={{ margin: 0, color: '#d4d4d8', fontSize: '13px', lineHeight: '1.5', maxHeight: '100px', overflowY: 'auto' }}>{selectedTransformation.journeyText}</p>
                 </div>
               </div>
-              <button onClick={() => { setSelectedTransformation(null); triggerEnquiryModal(`Inspired by Result Profile: ${selectedTransformation.name}`); }} style={{ width: '100%', padding: '16px', backgroundColor: uiColorMode, color: '#000000', border: 'none', borderRadius: '10px', fontWeight: '900', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              
+              <button type="button" onClick={() => { setSelectedTransformation(null); triggerEnquiryModal?.(`Inspired by Result Profile: ${selectedTransformation.name}`); }} style={{ width: '100%', padding: '14px', backgroundColor: uiColorMode, color: '#000000', border: 'none', borderRadius: '10px', fontWeight: '900', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', flexShrink: 0 }}>
                 GET RESULTS LIKE THIS <ChevronRight size={16} />
               </button>
             </div>
@@ -652,8 +650,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ENTRY ACQUISITION INTAKE FORM */}
-      {isEnquiryOpen && (
+     {/* ENTRY ACQUISITION INTAKE FORM */}
+     {isEnquiryOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(4,4,6,0.92)', backdropFilter: 'blur(20px)', zIndex: 110000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ width: '100%', maxWidth: '480px', backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', padding: '32px', boxSizing: 'border-box' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -670,14 +668,32 @@ export default function Home() {
                   <label style={{ display: 'block', fontSize: '11px', color: '#a1a1aa', marginBottom: '6px', fontWeight: '700', textTransform: 'uppercase' }}>
                     {field.label} {field.required && <span style={{ color: '#ef4444' }}>*</span>}
                   </label>
-                  <input 
-                    required={field.required}
-                    type={field.type} 
-                    placeholder={field.placeholder} 
-                    value={dynamicEnquiryData[field.id] || ''} 
-                    onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} 
-                    style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '14px' }}
-                  />
+                  
+                  {/* Conditionally choose between dropdown select list vs regular type text/number inputs */}
+                  {field.type === 'radio' ? (
+                    <select
+                      required={field.required}
+                      value={dynamicEnquiryData[field.id] || ''}
+                      onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })}
+                      style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '14px', outline: 'none', cursor: 'pointer' }}
+                    >
+                      <option value="" disabled hidden>Select your plan / option...</option>
+                      {field.options && field.options.map((option, idx) => (
+                        <option key={idx} value={option} style={{ backgroundColor: '#0c0c10', color: '#ffffff' }}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input 
+                      required={field.required}
+                      type={field.type || 'text'} 
+                      placeholder={field.placeholder} 
+                      value={dynamicEnquiryData[field.id] || ''} 
+                      onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} 
+                      style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '14px' }}
+                    />
+                  )}
                 </div>
               ))}
               <button type="submit" style={{ width: '100%', padding: '16px', backgroundColor: uiColorMode, color: '#000000', border: 'none', borderRadius: '10px', fontWeight: '900', marginTop: '10px', fontSize: '13px' }}>
@@ -766,54 +782,87 @@ export default function Home() {
   )}
 </div>
 
-                {/* DYNAMIC SCHEMA FIELD CONFIGURATOR */}
-                <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', padding: '18px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.04)' }}>
+               {/* DYNAMIC SCHEMA FIELD CONFIGURATOR */}
+               <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', padding: '18px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <label style={{ display: 'block', fontSize: '11px', color: uiColorMode, marginBottom: '10px', fontWeight: '900', textTransform: 'uppercase' }}>⚙️ ENTRY INTAKE SCHEMA ENGINE</label>
+                  
+                  {/* Render list of existing schema fields */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
-                    {formFields.map(f => (
+                    {formFields && formFields.map(f => (
                       <div key={f.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#0c0c10', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                        <span style={{ fontSize: '12px' }}>{f.label} {f.required && <span style={{ color: '#ef4444' }}>*</span>}</span>
-                        <button onClick={() => deleteSchemaFieldNode(f.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={14} /></button>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontSize: '12px', color: '#ffffff' }}>
+                            {f.label} {f.required && <span style={{ color: '#ef4444' }}>*</span>}
+                          </span>
+                          <span style={{ fontSize: '9px', color: '#a1a1aa', fontFamily: 'monospace', textTransform: 'uppercase' }}>
+                            Type: {f.type || 'text'} {f.options ? `[${f.options.join(', ')}]` : ''}
+                          </span>
+                        </div>
+                        <button type="button" onClick={() => deleteSchemaFieldNode(f.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={14} /></button>
                       </div>
                     ))}
                   </div>
+
+                  {/* Inputs to add a new schema field */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '14px' }}>
-                    <input type="text" placeholder="Custom Target Field Label" value={newFieldLabel} onChange={(e) => setNewFieldLabel(e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px' }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <input 
+                        type="text" 
+                        placeholder="Custom Target Field Label" 
+                        value={newFieldLabel} 
+                        onChange={(e) => setNewFieldLabel(e.target.value)} 
+                        style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }} 
+                      />
+                      <select
+                        value={newFieldType || 'text'}
+                        onChange={(e) => setNewFieldType?.(e.target.value)}
+                        style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px', cursor: 'pointer', boxSizing: 'border-box' }}
+                      >
+                        <option value="text">Plain Text</option>
+                        <option value="number">Number</option>
+                        <option value="radio">Options Select (Radio Buttons)</option>
+                      </select>
+                    </div>
+
+                    {/* Displays only if multiple choice fields are being built */}
+                    {newFieldType === 'radio' && (
+                      <input 
+                        type="text" 
+                        placeholder="Options List (Separate choices with commas, e.g. Fat Loss, Muscle Gain)" 
+                        value={rawOptions || ''} 
+                        onChange={(e) => (setRawOptions ? setRawOptions(e.target.value) : null)} 
+                        style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '10px 12px', color: '#ffffff', borderRadius: '8px', fontSize: '12px', boxSizing: 'border-box' }} 
+                      />
+                    )}
+
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#a1a1aa', cursor: 'pointer' }}>
-                      <input type="checkbox" checked={newFieldRequired} onChange={(e) => setNewFieldRequired(e.target.checked)} />
+                      <input 
+                        type="checkbox" 
+                        checked={!!newFieldRequired} 
+                        onChange={(e) => (setNewFieldRequired ? setNewFieldRequired(e.target.checked) : null)} 
+                      />
                       Enforce verification requirement (*)
                     </label>
-                    <button onClick={addNewCustomSchemaField} style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff', fontSize: '11px', padding: '10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700' }}>
+                    
+                    <button 
+                      type="button"
+                      onClick={addNewCustomSchemaField} 
+                      style={{ width: '100%', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff', fontSize: '11px', padding: '10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontWeight: '700', cursor: 'pointer' }}
+                    >
                       <Plus size={14} /> APPEND SCHEMA COMPONENT
                     </button>
                   </div>
                 </div>
 
+                {/* 1. BACKGROUND HERO TARGET GRAPHIC */}
                 <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', padding: '18px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.04)' }}>
                   <label style={{ display: 'block', fontSize: '11px', color: '#a1a1aa', marginBottom: '8px', fontWeight: '800', textTransform: 'uppercase' }}>1. Background Hero Target Graphic</label>
                   <input type="file" accept="image/*" onChange={(e) => processFileUploadStream(e, 'hero')} style={{ color: '#ffffff', fontSize: '12px' }} />
                 </div>
 
+                {/* 2. NEW OUTCOME TRANSFORMATION NODE */}
                 <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', padding: '18px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                  <label style={{ display: 'block', fontSize: '11px', color: '#a1a1aa', marginBottom: '12px', fontWeight: '800', textTransform: 'uppercase' }}>2. Archive Posing Slider Files</label>
-                  <input type="file" accept="image/*" multiple onChange={(e) => processFileUploadStream(e, 'gallery')} style={{ color: '#ffffff', fontSize: '12px', marginBottom: '16px' }} />
-                  
-                  <div style={{ fontSize: '11px', fontWeight: '800', color: uiColorMode, marginBottom: '10px' }}>ACTIVE SLIDER STRUCTS ({galleryList.length})</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto' }}>
-                    {galleryList.map((item) => (
-                      <div key={item.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#0c0c10', padding: '10px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <img src={item.img} style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '6px' }} alt="" />
-                          <span style={{ fontSize: '12px', color: '#e4e4e7', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '220px' }}>{item.title}</span>
-                        </div>
-                        <button onClick={() => deleteGalleryItem(item.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={15} /></button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', padding: '18px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.04)' }}>
-                  <label style={{ display: 'block', fontSize: '11px', color: '#a1a1aa', marginBottom: '8px', fontWeight: '800', textTransform: 'uppercase' }}>3. New Outcome Transformation Node</label>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#a1a1aa', marginBottom: '8px', fontWeight: '800', textTransform: 'uppercase' }}>2. New Outcome Transformation Node</label>
                   <input type="file" accept="image/*" onChange={(e) => processFileUploadStream(e, 'transformation')} style={{ color: '#ffffff', fontSize: '12px', marginBottom: '16px' }} />
                   
                   <div style={{ fontSize: '11px', fontWeight: '800', color: uiColorMode, marginBottom: '10px' }}>PROFILES LIVE ARCHIVE ({transformations.length})</div>
@@ -824,7 +873,7 @@ export default function Home() {
                           <img src={item.img} style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '6px' }} alt="" />
                           <span style={{ fontSize: '12px', fontWeight: '600' }}>{item.name} ({item.days})</span>
                         </div>
-                        <button onClick={(e) => deleteTransformationItem(item.id, e)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={15} /></button>
+                        <button type="button" onClick={(e) => deleteTransformationItem(item.id, e)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Trash2 size={15} /></button>
                       </div>
                     ))}
                   </div>
@@ -835,7 +884,6 @@ export default function Home() {
           </div>
         </div>
       )}
-
       {/* ALBUM COMPILER MULTIMEDIA FRAME */}
       {isTransMetaModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(4,4,6,0.98)', zIndex: 130000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
