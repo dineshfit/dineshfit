@@ -335,20 +335,13 @@ export default function Home() {
     if (e) e.preventDefault();
     let compiledMessage = `⚡ *NEW TEAM DINESH INTAKE ENTRY* ⚡\n\n` +
                           `🔥 *Program Route:* ${selectedPlanContext || 'General Elite Program Admission'}\n` +
-                          `──────────────────────\n` +
-                          `🔸 *Name:* ${dynamicEnquiryData.name || 'Not Specified'}\n` +
-                          `🔸 *Mobile:* ${dynamicEnquiryData.phone || 'Not Specified'}\n` +
-                          `🔸 *Age:* ${dynamicEnquiryData.age || 'Not Specified'}\n`;
+                          `──────────────────────\n`;
 
     formFields.forEach(f => {
-      const lowerLabel = f.label.toLowerCase();
-      if (!lowerLabel.includes('name') && !lowerLabel.includes('age') && !lowerLabel.includes('mobile')) {
-        const clientVal = dynamicEnquiryData[f.id] || 'Not specified';
-        compiledMessage += `🔸 *${f.label}:* ${clientVal}\n`;
-      }
+      const clientVal = dynamicEnquiryData[f.id] || 'Not specified';
+      compiledMessage += `🔸 *${f.label}:* ${clientVal}\n`;
     });
 
-    compiledMessage += `🔸 *Target Program:* ${dynamicEnquiryData.program || 'Elite 1-on-1 Transformation Tier'}\n`;
     compiledMessage += `──────────────────────\n🚀 _Sent from Team Dinesh Platform._`;
     window.open(`https://wa.me/${coachWhatsAppNumber}?text=${encodeURIComponent(compiledMessage)}`, '_blank');
     setIsEnquiryOpen(false);
@@ -638,33 +631,27 @@ export default function Home() {
               {formStep === 1 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Personal Identity</div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Full Name *</label>
-                    <input type="text" required placeholder="Enter Name" value={dynamicEnquiryData.name || ''} onChange={(e) => setDynamicEnquiryData({...dynamicEnquiryData, name: e.target.value})} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Mobile No *</label>
-                    <input type="tel" required placeholder="Enter Mobile no" value={dynamicEnquiryData.phone || ''} onChange={(e) => setDynamicEnquiryData({...dynamicEnquiryData, phone: e.target.value})} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
-                  </div>
 
                   {/* Dynamic Fields Scheduled for Step 1 */}
-                  {formFields && formFields.filter(f => (f.step === 1 || !f.step)).map((field) => {
-                    const lowerLabel = field.label.toLowerCase();
-                    if (lowerLabel.includes('name') || lowerLabel.includes('mobile')) return null;
-                    return (
-                      <div key={field.id}>
-                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>{field.label} {field.required && '*'}</label>
-                        {field.type === 'radio' || (field.options && field.options.length > 0) ? (
-                          <select required={field.required} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '13px', height: '48px' }}>
-                            <option value="" disabled hidden>Select option...</option>
-                            {field.options.map((option, idx) => <option key={idx} value={option}>{option}</option>)}
-                          </select>
-                        ) : (
-                          <input type={field.type || 'text'} required={field.required} placeholder={`Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
-                        )}
-                      </div>
-                    );
-                  })}
+                  {formFields && formFields.filter(f => (f.step === 1 || !f.step)).map((field) => (
+                    <div key={field.id}>
+                      <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>{field.label} {field.required && '*'}</label>
+                      {field.type === 'radio' || (field.options && field.options.length > 0) ? (
+                        <select required={field.required} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '13px', height: '48px' }}>
+                          <option value="" disabled hidden>Select option...</option>
+                          {field.options.map((option, idx) => <option key={idx} value={option}>{option}</option>)}
+                        </select>
+                      ) : (
+                        <input type={field.type || 'text'} required={field.required} placeholder={`Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
+                      )}
+                    </div>
+                  ))}
+
+                  {formFields.filter(f => f.step === 1 || !f.step).length === 0 && (
+                    <div style={{ padding: '20px', backgroundColor: 'rgba(245,158,11,0.04)', border: '1px dashed rgba(245,158,11,0.2)', borderRadius: '10px', textAlign: 'center', color: '#71717a', fontSize: '12px' }}>
+                      No fields added for Step 1 yet. Add them from the Coach Panel.
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -672,28 +659,27 @@ export default function Home() {
               {formStep === 2 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Physical Vitals</div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Age *</label>
-                    <input type="number" required placeholder="Enter Age" value={dynamicEnquiryData.age || ''} onChange={(e) => setDynamicEnquiryData({...dynamicEnquiryData, age: e.target.value})} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
-                  </div>
 
                   {/* Dynamic Fields Scheduled for Step 2 */}
-                  {formFields && formFields.filter(f => f.step === 2).map((field) => {
-                    if (field.label.toLowerCase().includes('age')) return null;
-                    return (
-                      <div key={field.id}>
-                        <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>{field.label} {field.required && '*'}</label>
-                        {field.type === 'radio' || (field.options && field.options.length > 0) ? (
-                          <select required={field.required} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '13px', height: '48px' }}>
-                            <option value="" disabled hidden>Select option...</option>
-                            {field.options.map((option, idx) => <option key={idx} value={option}>{option}</option>)}
-                          </select>
-                        ) : (
-                          <input type={field.type || 'text'} required={field.required} placeholder={`Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
-                        )}
-                      </div>
-                    );
-                  })}
+                  {formFields && formFields.filter(f => f.step === 2).map((field) => (
+                    <div key={field.id}>
+                      <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>{field.label} {field.required && '*'}</label>
+                      {field.type === 'radio' || (field.options && field.options.length > 0) ? (
+                        <select required={field.required} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '13px', height: '48px' }}>
+                          <option value="" disabled hidden>Select option...</option>
+                          {field.options.map((option, idx) => <option key={idx} value={option}>{option}</option>)}
+                        </select>
+                      ) : (
+                        <input type={field.type || 'text'} required={field.required} placeholder={`Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
+                      )}
+                    </div>
+                  ))}
+
+                  {formFields.filter(f => f.step === 2).length === 0 && (
+                    <div style={{ padding: '20px', backgroundColor: 'rgba(245,158,11,0.04)', border: '1px dashed rgba(245,158,11,0.2)', borderRadius: '10px', textAlign: 'center', color: '#71717a', fontSize: '12px' }}>
+                      No fields added for Step 2 yet. Add them from the Coach Panel.
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -716,6 +702,12 @@ export default function Home() {
                       )}
                     </div>
                   ))}
+
+                  {formFields.filter(f => f.step === 3).length === 0 && (
+                    <div style={{ padding: '20px', backgroundColor: 'rgba(245,158,11,0.04)', border: '1px dashed rgba(245,158,11,0.2)', borderRadius: '10px', textAlign: 'center', color: '#71717a', fontSize: '12px' }}>
+                      No fields added for Step 3 yet. Add them from the Coach Panel.
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -723,15 +715,6 @@ export default function Home() {
               {formStep === 4 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Target Settings</div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Program Option Tier *</label>
-                    <select required value={dynamicEnquiryData.program || ''} onChange={(e) => setDynamicEnquiryData({...dynamicEnquiryData, program: e.target.value})} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', boxSizing: 'border-box', fontSize: '13px', height: '48px' }}>
-                      <option value="" disabled hidden>Select structural track tier...</option>
-                      <option value="Elite 1-on-1 Transformation Tier">Elite 1-on-1 Transformation Tier</option>
-                      <option value="General Strength Programming">General Strength Programming</option>
-                      <option value="Custom Nutritional Meal Blueprint Only">Custom Nutritional Meal Blueprint Only</option>
-                    </select>
-                  </div>
 
                   {/* Dynamic Fields Scheduled for Step 4 */}
                   {formFields && formFields.filter(f => f.step === 4).map((field) => (
@@ -747,6 +730,12 @@ export default function Home() {
                       )}
                     </div>
                   ))}
+
+                  {formFields.filter(f => f.step === 4).length === 0 && (
+                    <div style={{ padding: '20px', backgroundColor: 'rgba(245,158,11,0.04)', border: '1px dashed rgba(245,158,11,0.2)', borderRadius: '10px', textAlign: 'center', color: '#71717a', fontSize: '12px' }}>
+                      No fields added for Step 4 yet. Add them from the Coach Panel.
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -757,9 +746,6 @@ export default function Home() {
                 )}
                 {formStep < totalSteps ? (
                   <button type="button" onClick={() => {
-                    if (formStep === 1 && (!dynamicEnquiryData.name || !dynamicEnquiryData.phone)) return alert('Identity verification parameters are incomplete.');
-                    if (formStep === 2 && !dynamicEnquiryData.age) return alert('Vitals tracking markers are incomplete.');
-                    
                     // Client side validations for dynamically added active fields
                     let activeFields = formFields.filter(f => f.step === formStep || (formStep === 1 && !f.step));
                     for (let f of activeFields) {
