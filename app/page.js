@@ -76,10 +76,10 @@ export default function Home() {
   // CLOUD DATA HYDRATION ENGINE (SUPABASE DATA FETCHES)
   // =========================================================================
   async function loadStoredData() {
-    const { data: pwdData } = await supabase.from('settings').select('value').eq('key', 'system_pin').single();
+    const { data: pwdData } = await supabase.from('settings').select('value').eq('key', 'system_pin').maybeSingle();
     if (pwdData && pwdData.value) setCurrentStoredPassword(pwdData.value);
 
-    const { data: heroData } = await supabase.from('settings').select('value').eq('key', 'hero_pic').single();
+    const { data: heroData } = await supabase.from('settings').select('value').eq('key', 'hero_pic').maybeSingle();
     if (heroData) setHeroImage(heroData.value);
 
     const { data: galleryData } = await supabase.from('gallery').select('*').order('created_at', { ascending: true });
@@ -104,7 +104,7 @@ export default function Home() {
       setTransformations(formatted);
     }
 
-    const { data: schemaData } = await supabase.from('form_schema').select('fields').eq('key', 'custom_fields').single();
+    const { data: schemaData } = await supabase.from('form_schema').select('fields').eq('key', 'custom_fields').maybeSingle();
     if (schemaData && schemaData.fields) setFormFields(schemaData.fields);
   }
 
@@ -472,62 +472,84 @@ export default function Home() {
 
       {/* FIXED PLAYBACK PLATFORM MODAL */}
       {selectedTransformation && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(4,4,6,0.96)', backdropFilter: 'blur(24px)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ width: '100%', maxWidth: '900px', height: '520px', backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', overflow: 'hidden', display: 'flex', flexWrap: 'nowrap', boxShadow: '0 40px 90px rgba(0,0,0,0.85)', boxSizing: 'border-box' }}>
-            <div style={{ position: 'relative', backgroundColor: '#020204', width: '50%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              {selectedTransformation.mediaTimeline && selectedTransformation.mediaTimeline.length > 0 ? (
-                <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-                  {selectedTransformation.mediaTimeline[activeMediaIndex].type === 'image' ? (
-                    <img src={selectedTransformation.mediaTimeline[activeMediaIndex].url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', backgroundColor: '#000000' }}>
-                      <video src={selectedTransformation.mediaTimeline[activeMediaIndex].url} style={{ width: '100%', height: '100%', objectFit: 'contain' }} controls autoPlay muted playsInline loop />
-                    </div>
-                  )}
-                  {selectedTransformation.mediaTimeline.length > 1 && (
-                    <>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setActiveMediaIndex(p => p === 0 ? selectedTransformation.mediaTimeline.length - 1 : p - 1); }} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(6,6,8,0.75)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}><ChevronLeft size={18} /></button>
-                      <button type="button" onClick={(e) => { e.stopPropagation(); setActiveMediaIndex(p => (p + 1) % selectedTransformation.mediaTimeline.length); }} style={{ position: 'absolute', right: '16px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(6,6,8,0.75)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', borderRadius: '50%', width: '40px', height: '40px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}><ChevronRight size={18} /></button>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <img src={selectedTransformation.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-              )}
-            </div>
-            <div style={{ width: '50%', height: '100%', padding: '32px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderLeft: '1px solid rgba(255,255,255,0.04)', boxSizing: 'border-box', overflowY: 'auto' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '900' }}>{selectedTransformation.name}</h3>
-                    <span style={{ color: '#71717a', fontSize: '12px', display: 'block', marginTop: '2px' }}>Client Index Status: Verified • {selectedTransformation.date}</span>
+        <>
+          <style>{`
+            @media (max-width: 640px) {
+              .trans-modal-inner { flex-direction: column !important; height: 100% !important; border-radius: 0 !important; max-width: 100% !important; }
+              .trans-media-pane  { width: 100% !important; height: auto !important; flex-shrink: 0; aspect-ratio: 1 / 1; }
+              .trans-media-pane img, .trans-media-pane video { object-fit: contain !important; }
+              .trans-info-pane   { width: 100% !important; height: auto !important; border-left: none !important; border-top: 1px solid rgba(255,255,255,0.06) !important; flex: 1; }
+              .trans-modal-bg    { padding: 0 !important; align-items: flex-start !important; }
+            }
+          `}</style>
+          <div className="trans-modal-bg" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(4,4,6,0.96)', backdropFilter: 'blur(24px)', zIndex: 100000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+            <div className="trans-modal-inner" style={{ width: '100%', maxWidth: '900px', height: '520px', backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '24px', overflow: 'hidden', display: 'flex', flexWrap: 'nowrap', boxShadow: '0 40px 90px rgba(0,0,0,0.85)', boxSizing: 'border-box', overflowY: 'auto' }}>
+              <div className="trans-media-pane" style={{ position: 'relative', backgroundColor: '#020204', width: '50%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {/* Close button — visible on mobile overlaid on media */}
+                <button type="button" onClick={() => setSelectedTransformation(null)} style={{ position: 'absolute', top: '12px', right: '12px', background: 'rgba(6,6,8,0.75)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', cursor: 'pointer', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 30 }}><X size={18} /></button>
+
+                {selectedTransformation.mediaTimeline && selectedTransformation.mediaTimeline.length > 0 ? (
+                  <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+                    {selectedTransformation.mediaTimeline[activeMediaIndex].type === 'image' ? (
+                      <img src={selectedTransformation.mediaTimeline[activeMediaIndex].url} style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' }} alt="" />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', backgroundColor: '#000000' }}>
+                        <video src={selectedTransformation.mediaTimeline[activeMediaIndex].url} style={{ width: '100%', height: '100%', objectFit: 'contain' }} controls autoPlay muted playsInline loop />
+                      </div>
+                    )}
+                    {selectedTransformation.mediaTimeline.length > 1 && (
+                      <>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setActiveMediaIndex(p => p === 0 ? selectedTransformation.mediaTimeline.length - 1 : p - 1); }} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(6,6,8,0.75)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}><ChevronLeft size={16} /></button>
+                        <button type="button" onClick={(e) => { e.stopPropagation(); setActiveMediaIndex(p => (p + 1) % selectedTransformation.mediaTimeline.length); }} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', backgroundColor: 'rgba(6,6,8,0.75)', border: '1px solid rgba(255,255,255,0.1)', color: '#ffffff', borderRadius: '50%', width: '36px', height: '36px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 20 }}><ChevronRight size={16} /></button>
+                        {/* Dot indicators */}
+                        <div style={{ position: 'absolute', bottom: '10px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '5px', zIndex: 20 }}>
+                          {selectedTransformation.mediaTimeline.map((_, i) => (
+                            <button key={i} type="button" onClick={(e) => { e.stopPropagation(); setActiveMediaIndex(i); }} style={{ width: i === activeMediaIndex ? '18px' : '6px', height: '6px', borderRadius: '3px', backgroundColor: i === activeMediaIndex ? uiColorMode : 'rgba(255,255,255,0.3)', border: 'none', cursor: 'pointer', padding: 0, transition: 'width 0.2s, background 0.2s' }} />
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <button type="button" onClick={() => setSelectedTransformation(null)} style={{ background: 'none', border: 'none', color: '#71717a', cursor: 'pointer' }}><X size={22} /></button>
-                </div>
-                <div style={{ display: 'inline-block', backgroundColor: 'rgba(16,185,129,0.08)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', fontSize: '11px', fontWeight: '900', padding: '6px 14px', borderRadius: '6px', marginBottom: '24px' }}>
-                  {selectedTransformation.lossGainText ? selectedTransformation.lossGainText.toUpperCase() : 'TRANSFORMATION'} ({selectedTransformation.days ? selectedTransformation.days.toUpperCase() : ''})
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
-                  <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '14px', borderRadius: '10px' }}>
-                    <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>Initial Base Mass</span>
-                    <span style={{ fontSize: '16px', fontWeight: '900', color: '#ffffff' }}>{selectedTransformation.beforeWeight}</span>
-                  </div>
-                  <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '14px', borderRadius: '10px' }}>
-                    <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>Target Attained</span>
-                    <span style={{ fontSize: '16px', fontWeight: '900', color: uiColorMode }}>{selectedTransformation.afterWeight}</span>
-                  </div>
-                </div>
-                <div style={{ marginBottom: '20px' }}>
-                  <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800' }}>Evolutionary Metric Narrative</h4>
-                  <p style={{ margin: 0, color: '#d4d4d8', fontSize: '13px', lineHeight: '1.5' }}>{selectedTransformation.journeyText}</p>
-                </div>
+                ) : (
+                  <img src={selectedTransformation.img} style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000' }} alt="" />
+                )}
               </div>
-              <button type="button" onClick={() => { setSelectedTransformation(null); triggerEnquiryModal(`Inspired by Result Profile: ${selectedTransformation.name}`); }} style={{ width: '100%', padding: '14px', backgroundColor: uiColorMode, color: '#000000', border: 'none', borderRadius: '10px', fontWeight: '900', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}>
-                GET RESULTS LIKE THIS <ChevronRight size={16} />
-              </button>
+
+              <div className="trans-info-pane" style={{ width: '50%', height: '100%', padding: '28px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderLeft: '1px solid rgba(255,255,255,0.04)', boxSizing: 'border-box', overflowY: 'auto' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900' }}>{selectedTransformation.name}</h3>
+                      <span style={{ color: '#71717a', fontSize: '11px', display: 'block', marginTop: '2px' }}>Client Index Status: Verified • {selectedTransformation.date}</span>
+                    </div>
+                    {/* Desktop-only close — hidden on mobile via the overlay close above */}
+                    <button type="button" onClick={() => setSelectedTransformation(null)} style={{ background: 'none', border: 'none', color: '#71717a', cursor: 'pointer', flexShrink: 0 }}><X size={20} /></button>
+                  </div>
+                  <div style={{ display: 'inline-block', backgroundColor: 'rgba(16,185,129,0.08)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', fontSize: '11px', fontWeight: '900', padding: '5px 12px', borderRadius: '6px', marginBottom: '20px' }}>
+                    {selectedTransformation.lossGainText ? selectedTransformation.lossGainText.toUpperCase() : 'TRANSFORMATION'} ({selectedTransformation.days ? selectedTransformation.days.toUpperCase() : ''})
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
+                    <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '12px', borderRadius: '10px' }}>
+                      <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>Initial Base Mass</span>
+                      <span style={{ fontSize: '15px', fontWeight: '900', color: '#ffffff' }}>{selectedTransformation.beforeWeight}</span>
+                    </div>
+                    <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '12px', borderRadius: '10px' }}>
+                      <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>Target Attained</span>
+                      <span style={{ fontSize: '15px', fontWeight: '900', color: uiColorMode }}>{selectedTransformation.afterWeight}</span>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom: '20px' }}>
+                    <h4 style={{ margin: '0 0 6px 0', fontSize: '11px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800' }}>Evolutionary Metric Narrative</h4>
+                    <p style={{ margin: 0, color: '#d4d4d8', fontSize: '13px', lineHeight: '1.5' }}>{selectedTransformation.journeyText}</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => { setSelectedTransformation(null); triggerEnquiryModal(`Inspired by Result Profile: ${selectedTransformation.name}`); }} style={{ width: '100%', padding: '14px', backgroundColor: uiColorMode, color: '#000000', border: 'none', borderRadius: '10px', fontWeight: '900', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', marginTop: '8px' }}>
+                  GET RESULTS LIKE THIS <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* CORE SERVICES MATRIX */}
