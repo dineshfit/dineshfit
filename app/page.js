@@ -69,6 +69,14 @@ export default function Home() {
   const [activeGalleryIdx, setActiveGalleryIdx] = useState(0);
   const [activeTransIdx, setActiveTransIdx] = useState(0);
 
+  // Dynamic Packages State
+  const [packages, setPackages] = useState([
+    { id: 'pkg_1', term: '3 Months Coaching Plan', price: '₹9,999', desc: 'Accelerated structural phase shifting framework ideal for short target resets.', points: ['Customized Meal Strategy Models', 'Full Workout Architecture Logs', 'Weekly Optimization Overhauls', 'Direct WhatsApp Line Connectivity'], high: false },
+    { id: 'pkg_2', term: '6 Months Elite Strategy', price: '₹17,999', desc: 'Advanced dynamic recomposition system designed for high physical adaptation cycles.', points: ['Comprehensive Macronutrient Matrix Charts', 'Hypertrophy Structural Mapping Protocols', 'Bi-weekly Direct Physical Checks', 'Priority Communication Pathway Access'], high: true },
+    { id: 'pkg_3', term: '12 Months Lifelong Legacy', price: '₹32,999', desc: 'Complete physical lifestyle conversion model tracking full permanent physiological upgrades.', points: ['Complete Multi-Phase Nutritional Cycles', 'Periodized Strength Training Formulas', 'Continuous Lifestyle Strategy Mapping', 'Direct Unlimited Matrix Coaching Access'], high: false }
+  ]);
+  const [editingPkgId, setEditingPkgId] = useState(null);
+
   // Schema Editor Staging Structs
   const [newFieldLabel, setNewFieldLabel] = useState('');
   const [newFieldRequired, setNewFieldRequired] = useState(false);
@@ -110,6 +118,11 @@ export default function Home() {
 
     const { data: schemaData } = await supabase.from('form_schema').select('fields').eq('key', 'custom_fields').maybeSingle();
     if (schemaData && schemaData.fields) setFormFields(schemaData.fields);
+
+    const { data: pkgData } = await supabase.from('settings').select('value').eq('key', 'packages_config').maybeSingle();
+    if (pkgData && pkgData.value) {
+      try { setPackages(JSON.parse(pkgData.value)); } catch(_) {}
+    }
   }
 
   useEffect(() => {
@@ -368,6 +381,15 @@ export default function Home() {
     await supabase.from('form_schema').upsert({ key: 'custom_fields', fields: alteredSchema });
   };
 
+  const savePackagesConfig = async (updatedPkgs) => {
+    setPackages(updatedPkgs);
+    await supabase.from('settings').upsert({ key: 'packages_config', value: JSON.stringify(updatedPkgs) });
+  };
+
+  const updatePackageField = (id, field, value) => {
+    setPackages(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+  };
+
   // =========================================================================
   // DYNAMIC COMPILER INTAKE & DISPATCH OVERLAYS
   // =========================================================================
@@ -570,11 +592,11 @@ export default function Home() {
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', backgroundColor: 'rgba(255,255,255,0.01)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
                           <div>
-                            <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>INITIAL MASS</span>
+                            <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>BEFORE TRANSFORMATION</span>
                             <span style={{ fontSize: '16px', fontWeight: '800', color: '#e4e4e7' }}>{item.beforeWeight}</span>
                           </div>
                           <div>
-                            <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>ATTAINED TARGET</span>
+                            <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>AFTER TRANSFORMATION</span>
                             <span style={{ fontSize: '16px', fontWeight: '800', color: uiColorMode }}>{item.afterWeight}</span>
                           </div>
                         </div>
@@ -625,14 +647,10 @@ export default function Home() {
       <section style={{ position: 'relative', zIndex: 10, padding: '50px 40px', maxWidth: '1200px', margin: '0 auto', boxSizing: 'border-box' }}>
         <div style={{ textAlign: 'center', marginBottom: '44px' }}>
           <span style={{ color: uiColorMode, fontSize: '11px', fontWeight: '800', letterSpacing: '2px' }}>PREMIUM ENROLLMENT SLOTS</span>
-          <h2 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 0 0' }}>INVESTMENT MATRIX ROUTES</h2>
+          <h2 style={{ fontSize: '26px', fontWeight: '900', margin: '4px 0 0 0' }}>CHOOSE YOUR PREFERRED PLAN</h2>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '32px' }}>
-          {[
-            { term: '3 Months Coaching Plan', price: '₹9,999', desc: 'Accelerated structural phase shifting framework ideal for short target resets.', points: ['Customized Meal Strategy Models', 'Full Workout Architecture Logs', 'Weekly Optimization Overhauls', 'Direct WhatsApp Line Connectivity'] },
-            { term: '6 Months Elite Strategy', price: '₹17,999', desc: 'Advanced dynamic recomposition system designed for high physical adaptation cycles.', points: ['Comprehensive Macronutrient Matrix Charts', 'Hypertrophy Structural Mapping Protocols', 'Bi-weekly Direct Physical Checks', 'Priority Communication Pathway Access'], high: true },
-            { term: '12 Months Lifelong Legacy', price: '₹32,999', desc: 'Complete physical lifestyle conversion model tracking full permanent physiological upgrades.', points: ['Complete Multi-Phase Nutritional Cycles', 'Periodized Strength Training Formulas', 'Continuous Lifestyle Strategy Mapping', 'Direct Unlimited Matrix Coaching Access'] }
-          ].map((tier, idx) => (
+          {packages.map((tier, idx) => (
             <div key={idx} style={{ backgroundColor: '#0c0c10', border: tier.high ? `1px solid ${uiColorMode}` : '1px solid rgba(255,255,255,0.04)', borderRadius: '20px', padding: '36px', display: 'flex', flexDirection: 'column', position: 'relative', boxShadow: tier.high ? `0 20px 40px rgba(245,158,11,0.05)` : 'none' }}>
               {tier.high && <span style={{ position: 'absolute', top: '18px', right: '24px', backgroundColor: uiColorMode, color: '#000000', fontSize: '9px', fontWeight: '900', padding: '4px 10px', borderRadius: '4px' }}>MOST POPULAR ROUTE</span>}
               <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '900' }}>{tier.term}</h3>
@@ -743,11 +761,11 @@ export default function Home() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '20px' }}>
                   <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '12px', borderRadius: '10px' }}>
-                    <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>Initial Base Mass</span>
+                    <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>BEFORE TRANSFORMATION</span>
                     <span style={{ fontSize: '16px', fontWeight: '800', color: '#e4e4e7' }}>{selectedTransformation.beforeWeight}</span>
                   </div>
                   <div style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', padding: '12px', borderRadius: '10px' }}>
-                    <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>Attained Metric Target</span>
+                    <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>AFTER TRANSFORMATION</span>
                     <span style={{ fontSize: '16px', fontWeight: '800', color: uiColorMode }}>{selectedTransformation.afterWeight}</span>
                   </div>
                 </div>
@@ -1051,6 +1069,41 @@ export default function Home() {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* CONFIG UNIT 3.5: PACKAGES DYNAMIC EDITOR */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <label style={{ color: '#a1a1aa', fontSize: '10px', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '900' }}><Zap size={14} /> 💎 PACKAGES DYNAMIC CONTROL PANEL</label>
+                  
+                  {packages.map((pkg) => (
+                    <div key={pkg.id} style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '900', color: uiColorMode }}>{pkg.term}</span>
+                        <button type="button" onClick={() => setEditingPkgId(editingPkgId === pkg.id ? null : pkg.id)} style={{ background: 'none', border: `1px solid ${uiColorMode}`, color: uiColorMode, cursor: 'pointer', fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(245,158,11,0.06)' }}>
+                          {editingPkgId === pkg.id ? 'COLLAPSE' : 'EDIT'}
+                        </button>
+                      </div>
+                      {editingPkgId === pkg.id && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                          <div>
+                            <span style={{ display: 'block', fontSize: '10px', color: '#71717a', fontWeight: '800', marginBottom: '4px' }}>PLAN NAME</span>
+                            <input type="text" value={pkg.term} onChange={(e) => updatePackageField(pkg.id, 'term', e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '8px 10px', color: '#ffffff', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} />
+                          </div>
+                          <div>
+                            <span style={{ display: 'block', fontSize: '10px', color: '#71717a', fontWeight: '800', marginBottom: '4px' }}>PRICE</span>
+                            <input type="text" value={pkg.price} onChange={(e) => updatePackageField(pkg.id, 'price', e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '8px 10px', color: '#ffffff', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} />
+                          </div>
+                          <div>
+                            <span style={{ display: 'block', fontSize: '10px', color: '#71717a', fontWeight: '800', marginBottom: '4px' }}>DESCRIPTION</span>
+                            <textarea value={pkg.desc} onChange={(e) => updatePackageField(pkg.id, 'desc', e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '8px 10px', color: '#ffffff', borderRadius: '6px', fontSize: '12px', resize: 'none', height: '60px', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                          </div>
+                          <button type="button" onClick={async () => { await savePackagesConfig(packages); setEditingPkgId(null); }} style={{ backgroundColor: uiColorMode, color: '#000000', fontSize: '11px', fontWeight: '900', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}>
+                            SAVE CHANGES
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
 
                 {/* CONFIG UNIT 4: TRANSFORMATION MATRICES REGISTRY */}
