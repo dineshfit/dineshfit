@@ -1,7 +1,7 @@
 'use client';
 
 import SecurityForm from '@/components/SecurityForm';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from './supabase'; 
 import { 
   X, Flame, ChevronRight, ChevronLeft, Star, Plus, Key,
@@ -60,6 +60,10 @@ export default function Home() {
     name: '', age: '', rating: 5, beforeWeight: '', afterWeight: '', days: '', date: '', lossGainText: '', journeyText: ''
   });
   const [tempMediaArray, setTempMediaArray] = useState([]); 
+
+  // Edit Transformation State
+  const [editingTransId, setEditingTransId] = useState(null);
+  const swipeStartXRef = useRef(0);
 
   // Carousel Layout Pointers
   const [activeGalleryIdx, setActiveGalleryIdx] = useState(0);
@@ -242,26 +246,47 @@ export default function Home() {
       alert('Please compile mandatory metric parameters: Name, Before, and After Weights.');
       return;
     }
-    const uniqueId = Date.now();
-    const compiledItem = {
-      id: uniqueId,
-      name: newTransMeta.name,
-      age: parseInt(newTransMeta.age) || 22,
-      rating: parseInt(newTransMeta.rating) || 5,
-      before_weight: newTransMeta.beforeWeight,
-      after_weight: newTransMeta.afterWeight,
-      days: newTransMeta.days || '90 Days',
-      date: newTransMeta.date || 'Recent Phase',
-      loss_gain_text: newTransMeta.lossGainText || 'Weight Change Verified',
-      img: tempTransImage, 
-      journey_text: newTransMeta.journeyText || 'No narrative description logs initialized.',
-      media_timeline: tempMediaArray
-    };
 
-    await supabase.from('transformations').insert([compiledItem]);
-    await loadStoredData(); 
+    if (editingTransId) {
+      // UPDATE existing record
+      const updatedItem = {
+        name: newTransMeta.name,
+        age: newTransMeta.age !== '' && newTransMeta.age !== undefined ? parseInt(newTransMeta.age) : '',
+        rating: parseInt(newTransMeta.rating) || 5,
+        before_weight: newTransMeta.beforeWeight,
+        after_weight: newTransMeta.afterWeight,
+        days: newTransMeta.days || '90 Days',
+        date: newTransMeta.date || 'Recent Phase',
+        loss_gain_text: newTransMeta.lossGainText || 'Weight Change Verified',
+        img: tempTransImage,
+        journey_text: newTransMeta.journeyText || 'No narrative description logs initialized.',
+        media_timeline: tempMediaArray
+      };
+      await supabase.from('transformations').update(updatedItem).eq('id', editingTransId);
+    } else {
+      // INSERT new record
+      const uniqueId = Date.now();
+      const compiledItem = {
+        id: uniqueId,
+        name: newTransMeta.name,
+        age: newTransMeta.age !== '' && newTransMeta.age !== undefined ? parseInt(newTransMeta.age) : '',
+        rating: parseInt(newTransMeta.rating) || 5,
+        before_weight: newTransMeta.beforeWeight,
+        after_weight: newTransMeta.afterWeight,
+        days: newTransMeta.days || '90 Days',
+        date: newTransMeta.date || 'Recent Phase',
+        loss_gain_text: newTransMeta.lossGainText || 'Weight Change Verified',
+        img: tempTransImage,
+        journey_text: newTransMeta.journeyText || 'No narrative description logs initialized.',
+        media_timeline: tempMediaArray
+      };
+      await supabase.from('transformations').insert([compiledItem]);
+    }
+
+    await loadStoredData();
 
     setIsTransMetaModalOpen(false);
+    setEditingTransId(null);
     setTempTransImage('');
     setTempMediaArray([]);
     setNewTransMeta({ name: '', age: '', rating: 5, beforeWeight: '', afterWeight: '', days: '', date: '', lossGainText: '', journeyText: '' });
@@ -271,6 +296,25 @@ export default function Home() {
     e.stopPropagation();
     setTransformations(prev => prev.filter(item => item.id !== id));
     await supabase.from('transformations').delete().eq('id', id);
+  };
+
+  const openEditTransformation = (item, e) => {
+    e.stopPropagation();
+    setEditingTransId(item.id);
+    setTempTransImage(item.img);
+    setTempMediaArray(item.mediaTimeline || []);
+    setNewTransMeta({
+      name: item.name,
+      age: item.age !== undefined && item.age !== null ? String(item.age) : '',
+      rating: item.rating || 5,
+      beforeWeight: item.beforeWeight || '',
+      afterWeight: item.afterWeight || '',
+      days: item.days || '',
+      date: item.date || '',
+      lossGainText: item.lossGainText || '',
+      journeyText: item.journeyText || ''
+    });
+    setIsTransMetaModalOpen(true);
   };
 
   // =========================================================================
@@ -410,7 +454,7 @@ export default function Home() {
             <span style={{ color: uiColorMode, fontSize: '11px', fontWeight: '800', letterSpacing: '2px', textTransform: 'uppercase' }}>VERIFIED LIVE ARCHIVES</span>
             <h2 style={{ fontSize: '28px', fontWeight: '900', margin: '4px 0 0 0', textTransform: 'uppercase', letterSpacing: '-0.5px' }}>CLIENT TRANSFORMATIONS</h2>
           </div>
-          {transformations.length > 3 && (
+          {transformations.length > 1 && (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button type="button" onClick={() => setActiveTransIdx(p => p === 0 ? transformations.length - 1 : p - 1)} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#ffffff', cursor: 'pointer', padding: '12px', borderRadius: '8px' }}><ChevronLeft size={16} /></button>
               <button type="button" onClick={() => setActiveTransIdx(p => (p + 1) % transformations.length)} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', color: '#ffffff', cursor: 'pointer', padding: '12px', borderRadius: '8px' }}><ChevronRight size={16} /></button>
@@ -419,49 +463,102 @@ export default function Home() {
         </div>
 
         {transformations.length > 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: '32px' }}>
-            {transformations.slice(activeTransIdx, activeTransIdx + 3).concat(transformations.slice(0, Math.max(0, 3 - (transformations.length - activeTransIdx)))).slice(0, Math.min(transformations.length, 3)).map((item) => (
-              <div key={item.id} onClick={() => { setSelectedTransformation(item); setActiveMediaIndex(0); }} style={{ backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '20px', overflow: 'hidden', cursor: 'pointer' }}>
-                <div style={{ width: '100%', height: '360px', position: 'relative', backgroundColor: '#040406' }}>
-                  <img src={item.img} style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000000' }} alt="" />
-                  <div style={{ position: 'absolute', bottom: '18px', left: '18px', backgroundColor: '#10b981', color: '#ffffff', fontSize: '11px', fontWeight: '900', padding: '6px 12px', borderRadius: '6px' }}>
-                    {item.lossGainText ? item.lossGainText.toUpperCase() : 'METRIC'}
-                  </div>
-                  {item.mediaTimeline && item.mediaTimeline.length > 1 && (
-                    <div style={{ position: 'absolute', top: '18px', left: '18px', backgroundColor: 'rgba(6,6,8,0.8)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff', fontSize: '10px', fontWeight: '800', padding: '5px 10px', borderRadius: '6px' }}>
-                      +{item.mediaTimeline.length - 1} INTERACTIVE LOGS
+          <>
+            <style>{`
+              @media (max-width: 768px) {
+                .trans-carousel-wrapper {
+                  overflow: hidden !important;
+                }
+                .trans-carousel-track {
+                  display: flex !important;
+                  flex-direction: row !important;
+                  gap: 0 !important;
+                  transition: transform 0.35s cubic-bezier(0.4,0,0.2,1) !important;
+                }
+                .trans-carousel-card {
+                  min-width: 100% !important;
+                  flex-shrink: 0 !important;
+                }
+              }
+              @media (min-width: 769px) {
+                .trans-carousel-track {
+                  display: grid !important;
+                  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)) !important;
+                  gap: 32px !important;
+                  transform: none !important;
+                }
+                .trans-carousel-card {
+                  min-width: unset !important;
+                }
+              }
+            `}</style>
+            <div
+              className="trans-carousel-wrapper"
+              style={{ position: 'relative', overflow: 'hidden' }}
+              onTouchStart={(e) => { swipeStartXRef.current = e.touches[0].clientX; }}
+              onTouchEnd={(e) => {
+                const dx = e.changedTouches[0].clientX - swipeStartXRef.current;
+                if (Math.abs(dx) > 40) {
+                  if (dx < 0) setActiveTransIdx(p => (p + 1) % transformations.length);
+                  else setActiveTransIdx(p => p === 0 ? transformations.length - 1 : p - 1);
+                }
+              }}
+            >
+              <div
+                className="trans-carousel-track"
+                style={{ transform: `translateX(-${activeTransIdx * 100}%)` }}
+              >
+                {transformations.map((item) => (
+                  <div key={item.id} className="trans-carousel-card" onClick={() => { setSelectedTransformation(item); setActiveMediaIndex(0); }} style={{ backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '20px', overflow: 'hidden', cursor: 'pointer' }}>
+                    <div style={{ width: '100%', height: '360px', position: 'relative', backgroundColor: '#040406' }}>
+                      <img src={item.img} style={{ width: '100%', height: '100%', objectFit: 'contain', backgroundColor: '#000000' }} alt="" />
+                      <div style={{ position: 'absolute', bottom: '18px', left: '18px', backgroundColor: '#10b981', color: '#ffffff', fontSize: '11px', fontWeight: '900', padding: '6px 12px', borderRadius: '6px' }}>
+                        {item.lossGainText ? item.lossGainText.toUpperCase() : 'METRIC'}
+                      </div>
+                      {item.mediaTimeline && item.mediaTimeline.length > 1 && (
+                        <div style={{ position: 'absolute', top: '18px', left: '18px', backgroundColor: 'rgba(6,6,8,0.8)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff', fontSize: '10px', fontWeight: '800', padding: '5px 10px', borderRadius: '6px' }}>
+                          +{item.mediaTimeline.length - 1} INTERACTIVE LOGS
+                        </div>
+                      )}
+                      <div style={{ position: 'absolute', top: '18px', right: '18px', backgroundColor: 'rgba(6,6,8,0.8)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)', padding: '5px 12px', borderRadius: '6px', fontSize: '11px', color: uiColorMode, fontWeight: '800' }}>
+                        {item.days ? item.days.toUpperCase() : ''}
+                      </div>
                     </div>
-                  )}
-                  <div style={{ position: 'absolute', top: '18px', right: '18px', backgroundColor: 'rgba(6,6,8,0.8)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)', padding: '5px 12px', borderRadius: '6px', fontSize: '11px', color: uiColorMode, fontWeight: '800' }}>
-                    {item.days ? item.days.toUpperCase() : ''}
-                  </div>
-                </div>
 
-                <div style={{ padding: '28px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', marginBottom: '16px' }}>
-                    <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900' }}>{item.name} <span style={{ color: '#71717a', fontWeight: '500', fontSize: '15px' }}>• {item.age} yrs</span></h3>
-                    <div style={{ display: 'flex', gap: '3px', color: uiColorMode }}>
-                      {[...Array(item.rating || 5)].map((_, i) => <Star key={i} size={13} fill="currentColor" />)}
-                    </div>
-                  </div>
+                    <div style={{ padding: '28px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', marginBottom: '16px' }}>
+                        <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '900' }}>{item.name} <span style={{ color: '#71717a', fontWeight: '500', fontSize: '15px' }}>• {item.age} yrs</span></h3>
+                        <div style={{ display: 'flex', gap: '3px', color: uiColorMode }}>
+                          {[...Array(item.rating || 5)].map((_, i) => <Star key={i} size={13} fill="currentColor" />)}
+                        </div>
+                      </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', backgroundColor: 'rgba(255,255,255,0.01)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
-                    <div>
-                      <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>INITIAL MASS</span>
-                      <span style={{ fontSize: '16px', fontWeight: '800', color: '#e4e4e7' }}>{item.beforeWeight}</span>
-                    </div>
-                    <div>
-                      <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>ATTAINED TARGET</span>
-                      <span style={{ fontSize: '16px', fontWeight: '800', color: uiColorMode }}>{item.afterWeight}</span>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', backgroundColor: 'rgba(255,255,255,0.01)', padding: '14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>INITIAL MASS</span>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#e4e4e7' }}>{item.beforeWeight}</span>
+                        </div>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '10px', color: '#52525b', textTransform: 'uppercase', fontWeight: '800', marginBottom: '2px' }}>ATTAINED TARGET</span>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: uiColorMode }}>{item.afterWeight}</span>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: '16px', fontSize: '13px', color: '#a1a1aa', lineHeight: '1.5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {item.journeyText}
+                      </div>
                     </div>
                   </div>
-                  <div style={{ marginTop: '16px', fontSize: '13px', color: '#a1a1aa', lineHeight: '1.5', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {item.journeyText}
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+            {transformations.length > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginTop: '20px' }}>
+                {transformations.map((_, idx) => (
+                  <button key={idx} type="button" onClick={() => setActiveTransIdx(idx)} style={{ width: idx === activeTransIdx ? '20px' : '8px', height: '8px', borderRadius: '4px', backgroundColor: idx === activeTransIdx ? uiColorMode : 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.3s ease' }} />
+                ))}
+              </div>
+            )}
+          </>
         ) : (
           <div style={{ backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '20px', padding: '70px 20px', textAlign: 'center', color: '#52525b' }}>
             <UploadCloud size={40} style={{ color: 'rgba(255,255,255,0.06)', marginBottom: '14px' }} />
@@ -891,7 +988,10 @@ export default function Home() {
                           <img src={item.img} style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '6px' }} alt="" />
                           <span style={{ fontSize: '12px', fontWeight: '600' }}>{item.name} ({item.days})</span>
                         </div>
-                        <button type="button" onClick={(e) => deleteTransformationItem(item.id, e)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={15} /></button>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button type="button" onClick={(e) => openEditTransformation(item, e)} style={{ background: 'none', border: 'none', color: uiColorMode, cursor: 'pointer', fontSize: '11px', fontWeight: '700', padding: '4px 8px', borderRadius: '4px', backgroundColor: 'rgba(245,158,11,0.08)' }}>EDIT</button>
+                          <button type="button" onClick={(e) => deleteTransformationItem(item.id, e)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}><Trash2 size={15} /></button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -907,7 +1007,7 @@ export default function Home() {
       {isTransMetaModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(4,4,6,0.98)', zIndex: 130000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
           <div style={{ width: '100%', maxWidth: '560px', backgroundColor: '#0c0c10', border: `1px solid ${uiColorMode}`, borderRadius: '24px', padding: '32px', maxHeight: '85vh', overflowY: 'auto' }}>
-            <h3 style={{ margin: '0 0 4px 0', fontSize: '17px', fontWeight: '900', color: uiColorMode, textTransform: 'uppercase' }}>Configure Transformation Metrics</h3>
+            <h3 style={{ margin: '0 0 4px 0', fontSize: '17px', fontWeight: '900', color: uiColorMode, textTransform: 'uppercase' }}>{editingTransId ? 'Edit Transformation Card' : 'Configure Transformation Metrics'}</h3>
             <p style={{ margin: '0 0 24px 0', fontSize: '12px', color: '#52525b' }}>Complete profile metrics and link up sequence elements into the timeline.</p>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '24px' }}>
@@ -948,8 +1048,8 @@ export default function Home() {
             </div>
 
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button onClick={() => { setIsTransMetaModalOpen(false); setTempTransImage(''); setTempMediaArray([]); }} style={{ flex: 1, padding: '14px', backgroundColor: 'rgba(255,255,255,0.04)', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: '700' }}>Cancel</button>
-              <button onClick={saveTransformationMetadata} style={{ flex: 1, padding: '14px', backgroundColor: uiColorMode, color: '#000000', border: 'none', borderRadius: '8px', fontWeight: '900' }}>Deploy Verification Card</button>
+              <button onClick={() => { setIsTransMetaModalOpen(false); setEditingTransId(null); setTempTransImage(''); setTempMediaArray([]); }} style={{ flex: 1, padding: '14px', backgroundColor: 'rgba(255,255,255,0.04)', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: '700' }}>Cancel</button>
+              <button onClick={saveTransformationMetadata} style={{ flex: 1, padding: '14px', backgroundColor: uiColorMode, color: '#000000', border: 'none', borderRadius: '8px', fontWeight: '900' }}>{editingTransId ? 'Save Changes' : 'Deploy Verification Card'}</button>
             </div>
           </div>
         </div>
