@@ -568,7 +568,7 @@ export default function Home() {
                 {transformations.map((item) => (
                   <div key={item.id} className="trans-carousel-card">
                     <div onClick={() => { setSelectedTransformation(item); setActiveMediaIndex(0); }} style={{ backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '20px', overflow: 'hidden', cursor: 'pointer' }}>
-                      <div style={{ width: '100%', aspectRatio: '4 / 5', position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ width: '100%', aspectRatio: '1 / 1', position: 'relative', overflow: 'hidden' }}>
                         <img src={item.img} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} alt="" />
                         <div style={{ position: 'absolute', top: '18px', right: '18px', backgroundColor: 'rgba(6,6,8,0.8)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)', padding: '5px 12px', borderRadius: '6px', fontSize: '11px', color: uiColorMode, fontWeight: '800' }}>
                           {item.days ? item.days.toUpperCase() : ''}
