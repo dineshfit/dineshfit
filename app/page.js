@@ -76,6 +76,7 @@ export default function Home() {
     { id: 'pkg_3', term: '12 Months Lifelong Legacy', price: '₹32,999', desc: 'Complete physical lifestyle conversion model tracking full permanent physiological upgrades.', points: ['Complete Multi-Phase Nutritional Cycles', 'Periodized Strength Training Formulas', 'Continuous Lifestyle Strategy Mapping', 'Direct Unlimited Matrix Coaching Access'], high: false }
   ]);
   const [editingPkgId, setEditingPkgId] = useState(null);
+  const [newPkgDraft, setNewPkgDraft] = useState({ term: '', price: '', desc: '', high: false, points: ['', '', '', ''] });
 
   // Schema Editor Staging Structs
   const [newFieldLabel, setNewFieldLabel] = useState('');
@@ -567,16 +568,8 @@ export default function Home() {
                 {transformations.map((item) => (
                   <div key={item.id} className="trans-carousel-card">
                     <div onClick={() => { setSelectedTransformation(item); setActiveMediaIndex(0); }} style={{ backgroundColor: '#0c0c10', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '20px', overflow: 'hidden', cursor: 'pointer' }}>
-                      <div style={{ width: '100%', height: '360px', position: 'relative' }}>
-                        <img src={item.img} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                        <div style={{ position: 'absolute', bottom: '18px', left: '18px', backgroundColor: '#10b981', color: '#ffffff', fontSize: '11px', fontWeight: '900', padding: '6px 12px', borderRadius: '6px' }}>
-                          {item.lossGainText ? item.lossGainText.toUpperCase() : 'METRIC'}
-                        </div>
-                        {item.mediaTimeline && item.mediaTimeline.length > 1 && (
-                          <div style={{ position: 'absolute', top: '18px', left: '18px', backgroundColor: 'rgba(6,6,8,0.8)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)', color: '#ffffff', fontSize: '10px', fontWeight: '800', padding: '5px 10px', borderRadius: '6px' }}>
-                            +{item.mediaTimeline.length - 1} INTERACTIVE LOGS
-                          </div>
-                        )}
+                      <div style={{ width: '100%', aspectRatio: '3 / 4', position: 'relative', overflow: 'hidden' }}>
+                        <img src={item.img} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} alt="" />
                         <div style={{ position: 'absolute', top: '18px', right: '18px', backgroundColor: 'rgba(6,6,8,0.8)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.08)', padding: '5px 12px', borderRadius: '6px', fontSize: '11px', color: uiColorMode, fontWeight: '800' }}>
                           {item.days ? item.days.toUpperCase() : ''}
                         </div>
@@ -806,25 +799,14 @@ export default function Home() {
 
             <form onSubmit={(e) => { e.preventDefault(); if (formStep === totalSteps) { handleDynamicEnquirySubmit(); } }} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              {/* STEP 1: INITIAL RECOGNITION DATA */}
+              {/* STEP 1 */}
               {formStep === 1 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Personal Identity</div>
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Full Client Name *</label>
-                    <input type="text" required placeholder="Enter your official name" value={dynamicEnquiryData.client_name || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, client_name: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>WhatsApp Number *</label>
-                    <input type="tel" required placeholder="Format: e.g. 919876543210" value={dynamicEnquiryData.client_phone || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, client_phone: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Age Status *</label>
-                    <input type="number" required placeholder="Enter years" value={dynamicEnquiryData.client_age || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, client_age: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
-                  </div>
-
-                  {formFields && formFields.filter(f => f.step === 1).map((field) => (
+                  {formFields.filter(f => f.step === 1).length > 0
+                    ? <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Personal Identity</div>
+                    : <div style={{ padding: '20px', backgroundColor: 'rgba(245,158,11,0.04)', border: '1px dashed rgba(245,158,11,0.2)', borderRadius: '10px', textAlign: 'center', color: '#71717a', fontSize: '12px' }}>No fields added for Step 1 yet. Add them from the Coach Panel.</div>
+                  }
+                  {formFields.filter(f => f.step === 1).map((field) => (
                     <div key={field.id}>
                       <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>{field.label} {field.required && '*'}</label>
                       {field.type === 'radio' || (field.options && field.options.length > 0) ? (
@@ -833,28 +815,21 @@ export default function Home() {
                           {field.options.map((option, idx) => <option key={idx} value={option}>{option}</option>)}
                         </select>
                       ) : (
-                        <input type={field.type || 'text'} required={field.required} placeholder={`Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
+                        <input type={field.type || 'text'} required={field.required} placeholder={field.placeholder || `Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
                       )}
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* STEP 2: PROFILE PHYSICAL VECTORS */}
+              {/* STEP 2 */}
               {formStep === 2 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Physical Vitals</div>
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Current Weight (KG) *</label>
-                    <input type="text" required placeholder="e.g. 78.5 kg" value={dynamicEnquiryData.client_weight || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, client_weight: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Height Metric *</label>
-                    <input type="text" required placeholder="e.g. 175 cm or 5'9\" value={dynamicEnquiryData.client_height || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, client_height: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
-                  </div>
-
-                  {formFields && formFields.filter(f => f.step === 2).map((field) => (
+                  {formFields.filter(f => f.step === 2).length > 0
+                    ? <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Physical Vitals</div>
+                    : <div style={{ padding: '20px', backgroundColor: 'rgba(245,158,11,0.04)', border: '1px dashed rgba(245,158,11,0.2)', borderRadius: '10px', textAlign: 'center', color: '#71717a', fontSize: '12px' }}>No fields added for Step 2 yet. Add them from the Coach Panel.</div>
+                  }
+                  {formFields.filter(f => f.step === 2).map((field) => (
                     <div key={field.id}>
                       <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>{field.label} {field.required && '*'}</label>
                       {field.type === 'radio' || (field.options && field.options.length > 0) ? (
@@ -863,7 +838,7 @@ export default function Home() {
                           {field.options.map((option, idx) => <option key={idx} value={option}>{option}</option>)}
                         </select>
                       ) : (
-                        <input type={field.type || 'text'} required={field.required} placeholder={`Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
+                        <input type={field.type || 'text'} required={field.required} placeholder={field.placeholder || `Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
                       )}
                     </div>
                   ))}
@@ -900,13 +875,10 @@ export default function Home() {
               {/* STEP 4: ROUTE SELECTION BLUEPRINT */}
               {formStep === 4 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Target Settings</div>
-                  
-                  <div>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>Primary Goal Selection *</label>
-                    <input type="text" required placeholder="e.g. Fat Loss, Muscle Gain" value={dynamicEnquiryData.client_goal || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, client_goal: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
-                  </div>
-
+                  {formFields.filter(f => f.step === 4).length > 0
+                    ? <div style={{ fontSize: '14px', fontWeight: '800', color: '#ffffff', marginBottom: '4px' }}>Target Settings</div>
+                    : <div style={{ padding: '20px', backgroundColor: 'rgba(245,158,11,0.04)', border: '1px dashed rgba(245,158,11,0.2)', borderRadius: '10px', textAlign: 'center', color: '#71717a', fontSize: '12px' }}>No fields added for Step 4 yet. Add them from the Coach Panel.</div>
+                  }
                   {formFields && formFields.filter(f => f.step === 4).map((field) => (
                     <div key={field.id}>
                       <label style={{ display: 'block', fontSize: '10px', fontWeight: '800', color: '#a1a1aa', textTransform: 'uppercase', marginBottom: '6px' }}>{field.label} {field.required && '*'}</label>
@@ -916,7 +888,7 @@ export default function Home() {
                           {field.options.map((option, idx) => <option key={idx} value={option}>{option}</option>)}
                         </select>
                       ) : (
-                        <input type={field.type || 'text'} required={field.required} placeholder={`Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
+                        <input type={field.type || 'text'} required={field.required} placeholder={field.placeholder || `Enter ${field.label}`} value={dynamicEnquiryData[field.id] || ''} onChange={(e) => setDynamicEnquiryData({ ...dynamicEnquiryData, [field.id]: e.target.value })} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.06)', padding: '14px', color: '#ffffff', borderRadius: '10px', fontSize: '13px', boxSizing: 'border-box' }} />
                       )}
                     </div>
                   ))}
@@ -930,18 +902,7 @@ export default function Home() {
                 
                 {formStep < totalSteps ? (
                   <button type="button" onClick={() => {
-                    if (formStep === 1) {
-                      if (!dynamicEnquiryData.client_name || !dynamicEnquiryData.client_phone || !dynamicEnquiryData.client_age) {
-                        return alert('Compile all identity metric markers accurately before advancing.');
-                      }
-                    }
-                    if (formStep === 2) {
-                      if (!dynamicEnquiryData.client_weight || !dynamicEnquiryData.client_height) {
-                        return alert('Compile all physical matrix configurations before advancing.');
-                      }
-                    }
-                    
-                    let activeFields = formFields.filter(f => f.step === formStep || (formStep === 1 && !f.step));
+                    let activeFields = formFields.filter(f => f.step === formStep);
                     for (let f of activeFields) {
                       if (f.required && !dynamicEnquiryData[f.id]) {
                         return alert(`"${f.label}" is required before moving to the next step.`);
@@ -1074,36 +1035,112 @@ export default function Home() {
                 {/* CONFIG UNIT 3.5: PACKAGES DYNAMIC EDITOR */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', paddingBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                   <label style={{ color: '#a1a1aa', fontSize: '10px', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '900' }}><Zap size={14} /> 💎 PACKAGES DYNAMIC CONTROL PANEL</label>
-                  
+
                   {packages.map((pkg) => (
-                    <div key={pkg.id} style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '11px', fontWeight: '900', color: uiColorMode }}>{pkg.term}</span>
-                        <button type="button" onClick={() => setEditingPkgId(editingPkgId === pkg.id ? null : pkg.id)} style={{ background: 'none', border: `1px solid ${uiColorMode}`, color: uiColorMode, cursor: 'pointer', fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '4px', backgroundColor: 'rgba(245,158,11,0.06)' }}>
-                          {editingPkgId === pkg.id ? 'COLLAPSE' : 'EDIT'}
-                        </button>
+                    <div key={pkg.id} style={{ backgroundColor: 'rgba(255,255,255,0.01)', border: `1px solid ${pkg.high ? uiColorMode : 'rgba(255,255,255,0.06)'}`, borderRadius: '10px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                          {pkg.high && <span style={{ fontSize: '8px', fontWeight: '900', backgroundColor: uiColorMode, color: '#000', padding: '2px 5px', borderRadius: '3px', flexShrink: 0 }}>★ POPULAR</span>}
+                          <span style={{ fontSize: '11px', fontWeight: '900', color: uiColorMode, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pkg.term}</span>
+                          <span style={{ fontSize: '11px', color: '#71717a', flexShrink: 0 }}>— {pkg.price}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                          <button type="button" onClick={() => setEditingPkgId(editingPkgId === pkg.id ? null : pkg.id)} style={{ border: `1px solid ${uiColorMode}`, color: uiColorMode, cursor: 'pointer', fontSize: '10px', fontWeight: '800', padding: '3px 7px', borderRadius: '4px', backgroundColor: 'rgba(245,158,11,0.06)' }}>
+                            {editingPkgId === pkg.id ? 'CLOSE' : 'EDIT'}
+                          </button>
+                          <button type="button" onClick={async () => { const updated = packages.filter(p => p.id !== pkg.id); await savePackagesConfig(updated); if (editingPkgId === pkg.id) setEditingPkgId(null); }} style={{ border: '1px solid rgba(239,68,68,0.4)', color: '#ef4444', cursor: 'pointer', fontSize: '10px', fontWeight: '800', padding: '3px 7px', borderRadius: '4px', backgroundColor: 'rgba(239,68,68,0.06)' }}>
+                            DEL
+                          </button>
+                        </div>
                       </div>
+
                       {editingPkgId === pkg.id && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '10px' }}>
                           <div>
                             <span style={{ display: 'block', fontSize: '10px', color: '#71717a', fontWeight: '800', marginBottom: '4px' }}>PLAN NAME</span>
-                            <input type="text" value={pkg.term} onChange={(e) => updatePackageField(pkg.id, 'term', e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '8px 10px', color: '#ffffff', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} />
+                            <input type="text" value={pkg.term} onChange={(e) => updatePackageField(pkg.id, 'term', e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '8px 10px', color: '#fff', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} />
                           </div>
                           <div>
                             <span style={{ display: 'block', fontSize: '10px', color: '#71717a', fontWeight: '800', marginBottom: '4px' }}>PRICE</span>
-                            <input type="text" value={pkg.price} onChange={(e) => updatePackageField(pkg.id, 'price', e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '8px 10px', color: '#ffffff', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} />
+                            <input type="text" value={pkg.price} onChange={(e) => updatePackageField(pkg.id, 'price', e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '8px 10px', color: '#fff', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} />
                           </div>
                           <div>
                             <span style={{ display: 'block', fontSize: '10px', color: '#71717a', fontWeight: '800', marginBottom: '4px' }}>DESCRIPTION</span>
-                            <textarea value={pkg.desc} onChange={(e) => updatePackageField(pkg.id, 'desc', e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '8px 10px', color: '#ffffff', borderRadius: '6px', fontSize: '12px', resize: 'none', height: '60px', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                            <textarea value={pkg.desc} onChange={(e) => updatePackageField(pkg.id, 'desc', e.target.value)} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '8px 10px', color: '#fff', borderRadius: '6px', fontSize: '12px', resize: 'none', height: '56px', fontFamily: 'inherit', boxSizing: 'border-box' }} />
                           </div>
-                          <button type="button" onClick={async () => { await savePackagesConfig(packages); setEditingPkgId(null); }} style={{ backgroundColor: uiColorMode, color: '#000000', fontSize: '11px', fontWeight: '900', border: 'none', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}>
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <span style={{ fontSize: '10px', color: '#71717a', fontWeight: '800' }}>FEATURE POINTS ({(pkg.points || []).length}/8)</span>
+                              {(pkg.points || []).length < 8 && (
+                                <button type="button" onClick={() => updatePackageField(pkg.id, 'points', [...(pkg.points || []), ''])} style={{ fontSize: '10px', color: uiColorMode, background: 'none', border: `1px solid ${uiColorMode}`, padding: '2px 7px', borderRadius: '3px', cursor: 'pointer', fontWeight: '800' }}>+ ADD</button>
+                              )}
+                            </div>
+                            {(pkg.points || []).map((pt, ptIdx) => (
+                              <div key={ptIdx} style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
+                                <input type="text" value={pt} onChange={(e) => { const pts = [...(pkg.points || [])]; pts[ptIdx] = e.target.value; updatePackageField(pkg.id, 'points', pts); }} placeholder={`Feature ${ptIdx + 1}`} style={{ flex: 1, backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '7px 9px', color: '#fff', borderRadius: '5px', fontSize: '11px', boxSizing: 'border-box' }} />
+                                {(pkg.points || []).length > 4 && (
+                                  <button type="button" onClick={() => { const pts = (pkg.points || []).filter((_, i) => i !== ptIdx); updatePackageField(pkg.id, 'points', pts); }} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '0 4px', fontWeight: '900' }}>×</button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <input type="checkbox" id={`pop_${pkg.id}`} checked={!!pkg.high} onChange={(e) => updatePackageField(pkg.id, 'high', e.target.checked)} />
+                            <label htmlFor={`pop_${pkg.id}`} style={{ fontSize: '11px', color: '#a1a1aa', cursor: 'pointer' }}>Mark as "MOST POPULAR" plan</label>
+                          </div>
+                          <button type="button" onClick={async () => { await savePackagesConfig(packages); setEditingPkgId(null); }} style={{ backgroundColor: uiColorMode, color: '#000', fontSize: '11px', fontWeight: '900', border: 'none', padding: '9px', borderRadius: '6px', cursor: 'pointer' }}>
                             SAVE CHANGES
                           </button>
                         </div>
                       )}
                     </div>
                   ))}
+
+                  {/* ADD NEW PLAN */}
+                  <div style={{ backgroundColor: 'rgba(245,158,11,0.03)', border: '1px dashed rgba(245,158,11,0.25)', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: '900', color: uiColorMode, letterSpacing: '0.5px' }}>+ ADD NEW PLAN</span>
+                    <div>
+                      <span style={{ display: 'block', fontSize: '10px', color: '#71717a', fontWeight: '800', marginBottom: '4px' }}>PLAN NAME *</span>
+                      <input type="text" placeholder="e.g. 9 Months Power Plan" value={newPkgDraft.term} onChange={(e) => setNewPkgDraft(p => ({ ...p, term: e.target.value }))} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '8px 10px', color: '#fff', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: '10px', color: '#71717a', fontWeight: '800', marginBottom: '4px' }}>PRICE *</span>
+                      <input type="text" placeholder="e.g. ₹24,999" value={newPkgDraft.price} onChange={(e) => setNewPkgDraft(p => ({ ...p, price: e.target.value }))} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '8px 10px', color: '#fff', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: '10px', color: '#71717a', fontWeight: '800', marginBottom: '4px' }}>DESCRIPTION</span>
+                      <textarea placeholder="Brief plan description..." value={newPkgDraft.desc} onChange={(e) => setNewPkgDraft(p => ({ ...p, desc: e.target.value }))} style={{ width: '100%', backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '8px 10px', color: '#fff', borderRadius: '6px', fontSize: '12px', resize: 'none', height: '52px', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '10px', color: '#71717a', fontWeight: '800' }}>FEATURE POINTS ({newPkgDraft.points.length}/8)</span>
+                        {newPkgDraft.points.length < 8 && (
+                          <button type="button" onClick={() => setNewPkgDraft(p => ({ ...p, points: [...p.points, ''] }))} style={{ fontSize: '10px', color: uiColorMode, background: 'none', border: `1px solid ${uiColorMode}`, padding: '2px 7px', borderRadius: '3px', cursor: 'pointer', fontWeight: '800' }}>+ ADD</button>
+                        )}
+                      </div>
+                      {newPkgDraft.points.map((pt, ptIdx) => (
+                        <div key={ptIdx} style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>
+                          <input type="text" value={pt} onChange={(e) => { const pts = [...newPkgDraft.points]; pts[ptIdx] = e.target.value; setNewPkgDraft(p => ({ ...p, points: pts })); }} placeholder={`Feature ${ptIdx + 1}`} style={{ flex: 1, backgroundColor: '#060608', border: '1px solid rgba(255,255,255,0.08)', padding: '7px 9px', color: '#fff', borderRadius: '5px', fontSize: '11px', boxSizing: 'border-box' }} />
+                          {newPkgDraft.points.length > 4 && (
+                            <button type="button" onClick={() => setNewPkgDraft(p => ({ ...p, points: p.points.filter((_, i) => i !== ptIdx) }))} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', padding: '0 4px', fontWeight: '900' }}>×</button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <input type="checkbox" id="newPkgPop" checked={!!newPkgDraft.high} onChange={(e) => setNewPkgDraft(p => ({ ...p, high: e.target.checked }))} />
+                      <label htmlFor="newPkgPop" style={{ fontSize: '11px', color: '#a1a1aa', cursor: 'pointer' }}>Mark as "MOST POPULAR" plan</label>
+                    </div>
+                    <button type="button" onClick={async () => {
+                      if (!newPkgDraft.term.trim() || !newPkgDraft.price.trim()) { alert('Plan Name and Price are required.'); return; }
+                      const cleanPoints = newPkgDraft.points.filter(p => p.trim());
+                      const newPkg = { id: 'pkg_' + Date.now(), term: newPkgDraft.term.trim(), price: newPkgDraft.price.trim(), desc: newPkgDraft.desc.trim(), points: cleanPoints, high: !!newPkgDraft.high };
+                      await savePackagesConfig([...packages, newPkg]);
+                      setNewPkgDraft({ term: '', price: '', desc: '', high: false, points: ['', '', '', ''] });
+                    }} style={{ backgroundColor: '#ffffff', color: '#000', fontSize: '11px', fontWeight: '900', border: 'none', padding: '9px', borderRadius: '6px', cursor: 'pointer' }}>
+                      CREATE PLAN
+                    </button>
+                  </div>
                 </div>
 
                 {/* CONFIG UNIT 4: TRANSFORMATION MATRICES REGISTRY */}
